@@ -62,6 +62,23 @@ public:
         return contains(typeId<EvT>, stateKey);
     }
 
+    template <typename EvT>
+    auto content(const QString& stateKey,
+                 typename EvT::content_type defaultValue = {}) const
+    {
+        // StateEvent<>::content is special in that it returns a const-ref,
+        // and lift() inside queryOr() can't wrap that in a temporary Omittable.
+        if (const auto evt = get<EvT>(stateKey))
+            return evt->content();
+        return defaultValue;
+    }
+
+    template <typename EvT>
+    auto content(typename EvT::content_type defaultValue = {}) const
+    {
+        return content<EvT>({}, std::move(defaultValue));
+    }
+
     //! \brief Get the content of the current state event with the given
     //!        event type and state key
     //! \return An empty object if there's no event in the current state with
