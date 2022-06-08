@@ -7,6 +7,12 @@ namespace Quotient {
 namespace EventContent {
     template <typename T, const QLatin1String* KeyStr>
     struct SingleKeyValue {
+        SingleKeyValue(const T& v = {})
+            : value { v }
+        {}
+        SingleKeyValue(T&& v)
+            : value { std::move(v) }
+        {}
         T value;
     };
 } // namespace EventContent
