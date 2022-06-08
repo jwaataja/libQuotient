@@ -16,9 +16,7 @@ public:
     static inline EventFactory<RoomEvent> factory { "RoomEvent" };
 
     // RedactionEvent is an incomplete type here so we cannot inline
-    // constructors and destructors and we cannot use 'using'.
-    RoomEvent(Type type, event_mtype_t matrixType,
-              const QJsonObject& contentJson = {});
+    // constructors and destructors (with 'using', in particular).
     RoomEvent(Type type, const QJsonObject& json);
     ~RoomEvent() override;
 
@@ -90,8 +88,6 @@ inline EventPtr doLoadEvent(const QJsonObject& json, const QString& matrixType)
 
 class QUOTIENT_API CallEventBase : public RoomEvent {
 public:
-    CallEventBase(Type type, event_mtype_t matrixType, const QString& callId,
-                  int version, const QJsonObject& contentJson = {});
     CallEventBase(Type type, const QJsonObject& json);
     ~CallEventBase() override = default;
     bool isCallEvent() const override { return true; }
@@ -104,6 +100,19 @@ protected:
                                  const QString& callId, int version,
                                  QJsonObject contentJson = {});
 };
+
+template <typename EventT>
+class EventBase<EventT, CallEventBase> : public CallEventBase {
+public:
+    EventBase(const QJsonObject& json)
+        : CallEventBase(typeId<EventT>, json)
+    {}
+    explicit EventBase(const QString& callId,
+                       const QJsonObject& contentJson = {})
+        : EventBase(basicJson(typeId<EventT>, callId, 0, contentJson))
+    {}
+};
+
 } // namespace Quotient
 Q_DECLARE_METATYPE(Quotient::RoomEvent*)
 Q_DECLARE_METATYPE(const Quotient::RoomEvent*)

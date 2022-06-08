@@ -166,7 +166,7 @@ list(APPEND lib_SRCS
     lib/events/directchatevent.h lib/events/directchatevent.cpp
     lib/events/encryptionevent.h lib/events/encryptionevent.cpp
     lib/events/encryptedevent.h lib/events/encryptedevent.cpp
-    lib/events/roomkeyevent.h lib/events/roomkeyevent.cpp
+    lib/events/roomkeyevent.h
     lib/events/stickerevent.h lib/events/stickerevent.cpp
     lib/events/keyverificationevent.h
     lib/events/filesourceinfo.h lib/events/filesourceinfo.cpp

@@ -12,8 +12,7 @@ public:
     static inline EventFactory<StateEventBase> factory { "StateEvent" };
 
     StateEventBase(Type type, const QJsonObject& json);
-    StateEventBase(Type type, event_mtype_t matrixType,
-                   const QString& stateKey = {},
+    StateEventBase(Type type, const QString& stateKey = {},
                    const QJsonObject& contentJson = {});
     ~StateEventBase() override = default;
 
@@ -76,46 +75,40 @@ using StateEventKey = std::pair<QString, QString>;
 
 template <typename ContentT>
 struct Prev {
-    template <typename... ContentParamTs>
-    explicit Prev(const QJsonObject& unsignedJson,
-                  ContentParamTs&&... contentParams)
+    explicit Prev(const QJsonObject& unsignedJson)
         : senderId(unsignedJson.value("prev_sender"_ls).toString())
-        , content(fromJson<ContentT>(unsignedJson.value(PrevContentKeyL)),
-                  std::forward<ContentParamTs>(contentParams)...)
+        , content(fromJson<ContentT>(unsignedJson.value(PrevContentKeyL)))
     {}
 
     QString senderId;
     ContentT content;
 };
 
-template <typename ContentT>
-class StateEvent : public StateEventBase {
+template <typename EventT, typename ContentT>
+class EventBase<EventT, StateEventBase, ContentT>
+    : public StateEventBase {
 public:
     using content_type = ContentT;
 
-    template <typename... ContentParamTs>
-    explicit StateEvent(Type type, const QJsonObject& fullJson,
-                        ContentParamTs&&... contentParams)
-        : StateEventBase(type, fullJson)
-        , _content(fromJson<ContentT>(contentJson()),
-                   std::forward<ContentParamTs>(contentParams)...)
+    explicit EventBase(const QJsonObject& fullJson)
+        : StateEventBase(Quotient::typeId<EventT>, fullJson)
+        , _content(fromJson<ContentT>(Event::contentJson()))
     {
         const auto& unsignedData = unsignedJson();
         if (unsignedData.contains(PrevContentKeyL))
-            _prev = std::make_unique<Prev<ContentT>>(
-                unsignedData, std::forward<ContentParamTs>(contentParams)...);
+            _prev = std::make_unique<Prev<ContentT>>(unsignedData);
     }
     template <typename... ContentParamTs>
-    explicit StateEvent(Type type, event_mtype_t matrixType,
-                        const QString& stateKey,
-                        ContentParamTs&&... contentParams)
-        : StateEventBase(type, matrixType, stateKey)
-        , _content{std::forward<ContentParamTs>(contentParams)...}
+    explicit EventBase(const QString& stateKey,
+                           ContentParamTs&&... contentParams)
+        : StateEventBase(typeId<EventT>, stateKey)
+        , _content { std::forward<ContentParamTs>(contentParams)... }
     {
         editJson().insert(ContentKey, toJson(_content));
     }
 
     const ContentT& content() const { return _content; }
+
     template <typename VisitorT>
     void editContent(VisitorT&& visitor)
     {
@@ -126,12 +119,39 @@ public:
     {
         return _prev ? &_prev->content : nullptr;
     }
-    QString prevSenderId() const { return _prev ? _prev->senderId : QString(); }
+    QString prevSenderId() const
+    {
+        return _prev ? _prev->senderId : QString();
+    }
 
 private:
     ContentT _content;
     std::unique_ptr<Prev<ContentT>> _prev;
 };
+
+template <typename EventT, typename ContentT>
+class KeyedStateEventBase
+    : public EventBase<EventT, StateEventBase, ContentT> {
+public:
+    using EventBase<EventT, StateEventBase, ContentT>::EventBase;
+};
+
+template <typename EventT, typename ContentT>
+class KeylessStateEventBase
+    : public EventBase<EventT, StateEventBase, ContentT> {
+private:
+    using base_type = EventBase<EventT, StateEventBase, ContentT>;
+
+public:
+    KeylessStateEventBase(const QJsonObject& fullJson)
+        : base_type(fullJson)
+    {}
+    template <typename... ContentParamTs>
+    KeylessStateEventBase(ContentParamTs&&... contentParams)
+        : base_type(QString(), std::forward<ContentParamTs>(contentParams)...)
+    {}
+};
+
 } // namespace Quotient
 Q_DECLARE_METATYPE(Quotient::StateEventBase*)
 Q_DECLARE_METATYPE(const Quotient::StateEventBase*)

@@ -7,11 +7,12 @@ namespace Quotient {
 
 /// Requests a key verification with another user's devices.
 /// Typically sent as a to-device event.
-class QUOTIENT_API KeyVerificationRequestEvent : public Event {
+class QUOTIENT_API KeyVerificationRequestEvent
+    : public EventBase<KeyVerificationRequestEvent, Event> {
 public:
     DEFINE_EVENT_TYPEID("m.key.verification.request", KeyVerificationRequestEvent)
 
-    explicit KeyVerificationRequestEvent(const QJsonObject& obj);
+    using EventBase::EventBase;
 
     /// The device ID which is initiating the request.
     QUO_CONTENT_GETTER(QString, fromDevice)
@@ -29,14 +30,14 @@ public:
     /// by the receiver.
     QUO_CONTENT_GETTER(uint64_t, timestamp)
 };
-REGISTER_EVENT_TYPE(KeyVerificationRequestEvent)
 
 /// Begins a key verification process.
-class QUOTIENT_API KeyVerificationStartEvent : public Event {
+class QUOTIENT_API KeyVerificationStartEvent
+    : public EventBase<KeyVerificationStartEvent, Event> {
 public:
     DEFINE_EVENT_TYPEID("m.key.verification.start", KeyVerificationStartEvent)
 
-    explicit KeyVerificationStartEvent(const QJsonObject &obj);
+    using EventBase::EventBase;
 
     /// The device ID which is initiating the process.
     QUO_CONTENT_GETTER(QString, fromDevice)
@@ -86,15 +87,15 @@ public:
         return contentPart<QString>("short_authentification_string"_ls);
     }
 };
-REGISTER_EVENT_TYPE(KeyVerificationStartEvent)
 
 /// Accepts a previously sent m.key.verification.start message.
 /// Typically sent as a to-device event.
-class QUOTIENT_API KeyVerificationAcceptEvent : public Event {
+class QUOTIENT_API KeyVerificationAcceptEvent
+    : public EventBase<KeyVerificationAcceptEvent, Event> {
 public:
     DEFINE_EVENT_TYPEID("m.key.verification.accept", KeyVerificationAcceptEvent)
 
-    explicit KeyVerificationAcceptEvent(const QJsonObject& obj);
+    using EventBase::EventBase;
 
     /// An opaque identifier for the verification process.
     QUO_CONTENT_GETTER(QString, transactionId)
@@ -125,13 +126,13 @@ public:
     /// canonical JSON representation of the m.key.verification.start message.
     QUO_CONTENT_GETTER(QString, commitment)
 };
-REGISTER_EVENT_TYPE(KeyVerificationAcceptEvent)
 
-class QUOTIENT_API KeyVerificationCancelEvent : public Event {
+class QUOTIENT_API KeyVerificationCancelEvent
+    : public EventBase<KeyVerificationCancelEvent, Event> {
 public:
     DEFINE_EVENT_TYPEID("m.key.verification.cancel", KeyVerificationCancelEvent)
 
-    explicit KeyVerificationCancelEvent(const QJsonObject &obj);
+    using EventBase::EventBase;
 
     /// An opaque identifier for the verification process.
     QUO_CONTENT_GETTER(QString, transactionId)
@@ -143,15 +144,15 @@ public:
     /// The error code for why the process/request was cancelled by the user.
     QUO_CONTENT_GETTER(QString, code)
 };
-REGISTER_EVENT_TYPE(KeyVerificationCancelEvent)
 
 /// Sends the ephemeral public key for a device to the partner device.
 /// Typically sent as a to-device event.
-class KeyVerificationKeyEvent : public Event {
+class KeyVerificationKeyEvent
+    : public EventBase<KeyVerificationKeyEvent, Event> {
 public:
     DEFINE_EVENT_TYPEID("m.key.verification.key", KeyVerificationKeyEvent)
 
-    explicit KeyVerificationKeyEvent(const QJsonObject &obj);
+    using EventBase::EventBase;
 
     /// An opaque identifier for the verification process.
     QUO_CONTENT_GETTER(QString, transactionId)
@@ -159,14 +160,14 @@ public:
     /// The device's ephemeral public key, encoded as unpadded base64.
     QUO_CONTENT_GETTER(QString, key)
 };
-REGISTER_EVENT_TYPE(KeyVerificationKeyEvent)
 
 /// Sends the MAC of a device's key to the partner device.
-class QUOTIENT_API KeyVerificationMacEvent : public Event {
+class QUOTIENT_API KeyVerificationMacEvent
+    : public EventBase<KeyVerificationMacEvent, Event> {
 public:
     DEFINE_EVENT_TYPEID("m.key.verification.mac", KeyVerificationMacEvent)
 
-    explicit KeyVerificationMacEvent(const QJsonObject &obj);
+    using EventBase::EventBase;
 
     /// An opaque identifier for the verification process.
     QUO_CONTENT_GETTER(QString, transactionId)
@@ -179,5 +180,4 @@ public:
         return contentPart<QHash<QString, QString>>("mac"_ls);
     }
 };
-REGISTER_EVENT_TYPE(KeyVerificationMacEvent)
 } // namespace Quotient

@@ -6,7 +6,7 @@
 using namespace Quotient;
 
 StickerEvent::StickerEvent(const QJsonObject &obj)
-    : RoomEvent(typeId(), obj)
+    : RoomEvent(TypeId, obj)
     , m_imageContent(EventContent::ImageContent(obj["content"_ls].toObject()))
 {}
 

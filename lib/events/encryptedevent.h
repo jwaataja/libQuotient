@@ -59,6 +59,5 @@ public:
 
     void setRelation(const QJsonObject& relation);
 };
-REGISTER_EVENT_TYPE(EncryptedEvent)
 
 } // namespace Quotient

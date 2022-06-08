@@ -6,15 +6,22 @@
 #include "event.h"
 
 namespace Quotient {
-class QUOTIENT_API RoomKeyEvent : public Event
+class QUOTIENT_API RoomKeyEvent : public EventBase<RoomKeyEvent, Event>
 {
 public:
     DEFINE_EVENT_TYPEID("m.room_key", RoomKeyEvent)
 
-    explicit RoomKeyEvent(const QJsonObject& obj);
+    using EventBase::EventBase;
     explicit RoomKeyEvent(const QString& algorithm, const QString& roomId,
-                          const QString& sessionId, const QString& sessionKey,
-                          const QString& senderId);
+                          const QString& sessionId,
+                          const QString& sessionKey)
+        : EventBase(Event::basicJson(TypeId, {
+                                                 { "algorithm", algorithm },
+                                                 { "room_id", roomId },
+                                                 { "session_id", sessionId },
+                                                 { "session_key", sessionKey },
+                                             }))
+    {}
 
     QUO_CONTENT_GETTER(QString, algorithm)
     QUO_CONTENT_GETTER(QString, roomId)
@@ -24,5 +31,4 @@ public:
         return contentPart<QString>("session_key"_ls).toLatin1();
     }
 };
-REGISTER_EVENT_TYPE(RoomKeyEvent)
 } // namespace Quotient

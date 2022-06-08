@@ -6,12 +6,11 @@
 #include "roomevent.h"
 
 namespace Quotient {
-class RedactionEvent : public RoomEvent {
+class RedactionEvent : public EventBase<RedactionEvent, RoomEvent> {
 public:
     DEFINE_EVENT_TYPEID("m.room.redaction", RedactionEvent)
 
-    explicit RedactionEvent(const QJsonObject& obj) : RoomEvent(typeId(), obj)
-    {}
+    using EventBase::EventBase;
 
     QString redactedEvent() const
     {
@@ -19,5 +18,4 @@ public:
     }
     QUO_CONTENT_GETTER(QString, reason)
 };
-REGISTER_EVENT_TYPE(RedactionEvent)
 } // namespace Quotient

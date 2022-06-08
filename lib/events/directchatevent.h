@@ -6,13 +6,13 @@
 #include "event.h"
 
 namespace Quotient {
-class QUOTIENT_API DirectChatEvent : public Event {
+class QUOTIENT_API DirectChatEvent
+    : public EventBase<DirectChatEvent, Event> {
 public:
     DEFINE_EVENT_TYPEID("m.direct", DirectChatEvent)
 
-    explicit DirectChatEvent(const QJsonObject& obj) : Event(typeId(), obj) {}
+    using EventBase::EventBase;
 
     QMultiHash<QString, QString> usersToDirectChats() const;
 };
-REGISTER_EVENT_TYPE(DirectChatEvent)
 } // namespace Quotient

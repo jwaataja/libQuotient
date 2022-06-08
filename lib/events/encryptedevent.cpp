@@ -9,7 +9,7 @@ using namespace Quotient;
 
 EncryptedEvent::EncryptedEvent(const QJsonObject& ciphertext,
                                const QString& senderKey)
-    : RoomEvent(typeId(), matrixTypeId(),
+    : RoomEvent(TypeId,
                 { { AlgorithmKeyL, OlmV1Curve25519AesSha2AlgoKey },
                   { CiphertextKeyL, ciphertext },
                   { SenderKeyKeyL, senderKey } })
@@ -17,7 +17,7 @@ EncryptedEvent::EncryptedEvent(const QJsonObject& ciphertext,
 
 EncryptedEvent::EncryptedEvent(QByteArray ciphertext, const QString& senderKey,
                                const QString& deviceId, const QString& sessionId)
-    : RoomEvent(typeId(), matrixTypeId(),
+    : RoomEvent(TypeId,
                 {
                     { AlgorithmKeyL, MegolmV1AesSha2AlgoKey },
                     { CiphertextKeyL, QString(ciphertext) },
@@ -28,7 +28,7 @@ EncryptedEvent::EncryptedEvent(QByteArray ciphertext, const QString& senderKey,
 {}
 
 EncryptedEvent::EncryptedEvent(const QJsonObject& obj)
-    : RoomEvent(typeId(), obj)
+    : RoomEvent(TypeId, obj)
 {
     qCDebug(E2EE) << "Encrypted event from" << senderId();
 }

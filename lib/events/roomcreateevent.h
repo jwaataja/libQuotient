@@ -12,7 +12,7 @@ public:
     DEFINE_EVENT_TYPEID("m.room.create", RoomCreateEvent)
 
     explicit RoomCreateEvent(const QJsonObject& obj)
-        : StateEventBase(typeId(), obj)
+        : StateEventBase(TypeId, obj)
     {}
 
     struct Predecessor {
@@ -26,5 +26,4 @@ public:
     bool isUpgrade() const;
     RoomType roomType() const;
 };
-REGISTER_EVENT_TYPE(RoomCreateEvent)
 } // namespace Quotient

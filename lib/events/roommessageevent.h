@@ -94,7 +94,6 @@ private:
 
     Q_ENUM(MsgType)
 };
-REGISTER_EVENT_TYPE(RoomMessageEvent)
 using MessageEventType = RoomMessageEvent::MsgType;
 
 namespace EventContent {

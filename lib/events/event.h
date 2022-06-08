@@ -6,6 +6,7 @@
 #include "converters.h"
 #include "logging.h"
 #include "function_traits.h"
+#include "single_key_value.h"
 
 namespace Quotient {
 // === event_ptr_tt<> and type casting facilities ===
@@ -66,10 +67,7 @@ private:
 };
 
 template <typename EventT>
-constexpr event_type_t typeId()
-{
-    return std::decay_t<EventT>::TypeId;
-}
+inline const event_type_t typeId = std::decay_t<EventT>::TypeId;
 
 constexpr event_type_t UnknownEventTypeId = "?"_ls;
 [[deprecated("Use UnknownEventTypeId")]]
@@ -93,12 +91,23 @@ namespace _impl {
         explicit EventFactoryBase(const char* name)
             : name(name)
         {}
-        void logAddingMethod(event_type_t TypeId, size_t newSize);
+        bool isMethodRegistered(event_type_t matrixType, const char* className,
+                                const char* registeredClassName,
+                                size_t currentSize) const;
 
     private:
         const char* const name;
     };
 } // namespace _impl
+
+template <class EventT, class BaseEventT>
+event_ptr_tt<BaseEventT> makeIfMatches(const QJsonObject& json,
+                                       const QString& matrixType)
+{
+    // If your matrix event type is not all ASCII, it's your problem
+    // (see https://github.com/matrix-org/matrix-doc/pull/2758)
+    return typeId<EventT> == matrixType ? makeEvent<EventT>(json) : nullptr;
+}
 
 //! \brief A family of event factories to create events from CS API responses
 //!
@@ -117,15 +126,6 @@ private:
                                                   const QString&);
     std::vector<method_t> methods {};
 
-    template <class EventT>
-    static event_ptr_tt<BaseEventT> makeIfMatches(const QJsonObject& json,
-                                                  const QString& matrixType)
-    {
-        // If your matrix event type is not all ASCII, it's your problem
-        // (see https://github.com/matrix-org/matrix-doc/pull/2758)
-        return EventT::TypeId == matrixType ? makeEvent<EventT>(json) : nullptr;
-    }
-
 public:
     explicit EventFactory(const char* fName)
         : EventFactoryBase { fName }
@@ -133,20 +133,23 @@ public:
 
     //! \brief Add a method to create events of a given type
     //!
-    //! Adds a standard factory method (makeIfMatches) for \p EventT so that
-    //! event objects of this type can be created dynamically by loadEvent.
-    //! The caller is responsible for ensuring this method is called only
-    //! once per type.
-    //! \sa loadEvent, Quotient::loadEvent
-    template <class EventT>
-    const auto& addMethod()
+    //! Adds a factory method \p m - usually it's a specialisation of
+    //! makeIfMatches() - to create event objects of some type from loadEvent().
+    //! The string passed in \p eventType is only used for logging; the factory
+    //! method should already be wired to check for the specific event type,
+    //! or delegate this checking to another factory.
+    //! \note The caller is responsible for ensuring that addMethod is called
+    //! only once per event type
+    //! \sa makeIfMatches, loadEvent, Quotient::loadEvent
+    auto tryAddMethod(method_t m, event_type_t matrixType,
+                      const char* className, const char* registeredClassName)
     {
-        const auto m = &makeIfMatches<EventT>;
-        const auto it = std::find(methods.cbegin(), methods.cend(), m);
-        if (it != methods.cend())
-            return *it;
-        logAddingMethod(EventT::TypeId, methods.size() + 1);
-        return methods.emplace_back(m);
+        if (Q_LIKELY(!isMethodRegistered(matrixType, className,
+                                         registeredClassName, methods.size()))) {
+            registeredClassName = className;
+            methods.emplace_back(m);
+        }
+        return registeredClassName;
     }
 
     auto loadEvent(const QJsonObject& json, const QString& matrixType)
@@ -179,8 +182,7 @@ public:
     static inline EventFactory<Event> factory { "Event" };
 
     explicit Event(Type type, const QJsonObject& json);
-    explicit Event(Type type, event_mtype_t matrixType,
-                   const QJsonObject& contentJson = {});
+
     Q_DISABLE_COPY(Event)
     Event(Event&&) = default;
     Event& operator=(Event&&) = delete;
@@ -249,7 +251,7 @@ protected:
     virtual void dumpTo(QDebug dbg) const;
 
 private:
-    Type _type;
+    const Type _type;
     QJsonObject _json;
 };
 using EventPtr = event_ptr_tt<Event>;
@@ -257,6 +259,13 @@ using EventPtr = event_ptr_tt<Event>;
 template <typename EventT>
 using EventsArray = std::vector<event_ptr_tt<EventT>>;
 using Events = EventsArray<Event>;
+
+#define QUO_CONTENT_GETTER_IMPL(PartType_, PartName_, JsonKey_) \
+    PartType_ PartName_() const                                 \
+    {                                                           \
+        static const auto PartName_##JsonKey = JsonKey_;        \
+        return contentPart<PartType_>(PartName_##JsonKey);      \
+    }
 
 //! \brief Define an inline method obtaining a content part
 //!
@@ -266,32 +275,72 @@ using Events = EventsArray<Event>;
 //! \code
 //! contentPart<PartType_>(Quotient::toSnakeCase(#PartName_##_ls));
 //! \endcode
-#define QUO_CONTENT_GETTER(PartType_, PartName_)                  \
-    PartType_ PartName_() const                                   \
-    {                                                             \
-        static const auto JsonKey = toSnakeCase(#PartName_##_ls); \
-        return contentPart<PartType_>(JsonKey);                   \
-    }
+#define QUO_CONTENT_GETTER(PartType_, PartName_) \
+    QUO_CONTENT_GETTER_IMPL(PartType_, PartName_, toSnakeCase(#PartName_##_ls))
 
 // === Facilities for event class definitions ===
 
+//! \brief Adds an event factory to its default factory chain
+//!
+//! Adds a standard factory method (via makeIfMatches) for a given event type
+//! to EventT::factory so that loadEvent<>() could create objects of this class
+//! dynamically from JSON.
+//!
+//! \tparam EventT the type to enable dynamic creation of
+//! \sa loadEvent, Event::type
+template <class EventT>
+event_type_t registerEventType(event_type_t matrixType,
+                               const char* className = nullptr)
+{
+    // A simple way to ensure the same factory is only added once.
+    // This won't really protect against double registration across
+    // dynamically loaded libraries but each of those factory methods is
+    // interchangeable and self-contained anyway so two entries won't really
+    // hurt.
+    static const char* registeredClassName = nullptr;
+    registeredClassName = EventT::factory.tryAddMethod(&makeIfMatches<EventT>,
+                                                       matrixType, className,
+                                                       registeredClassName);
+    return { matrixType };
+}
+
 // This macro should be used in a public section of an event class to
 // provide matrixTypeId() and typeId().
-#define DEFINE_EVENT_TYPEID(Id_, Type_)                           \
-    static constexpr event_type_t TypeId = Id_##_ls;              \
-    [[deprecated("Use " #Type_ "::TypeId directly instead")]]     \
-    static constexpr event_mtype_t matrixTypeId() { return Id_; } \
-    [[deprecated("Use " #Type_ "::TypeId directly instead")]]     \
-    static event_type_t typeId() { return TypeId; }               \
+#define DEFINE_EVENT_TYPEID(Id_, Type_)                                   \
+    static inline const auto TypeId { registerEventType<Type_>(Id_##_ls,  \
+                                                               #Type_) }; \
+    [[deprecated("Use " #Type_ "::TypeId directly instead")]]             \
+    static constexpr event_mtype_t matrixTypeId() { return Id_; }         \
+    [[deprecated("Use " #Type_ "::TypeId directly instead")]]             \
+    static event_type_t typeId() { return TypeId; }                       \
     // End of macro
 
-// This macro should be put after an event class definition (in .h or .cpp)
-// to enable its deserialisation from a /sync and other
-// polymorphic event arrays
-#define REGISTER_EVENT_TYPE(Type_)                                \
-    [[maybe_unused]] inline const auto& factoryMethodFor##Type_ = \
-        Type_::factory.addMethod<Type_>();                        \
-    // End of macro
+// === EventBase<> and other facilities to create event classes ===
+
+template <class EventT, class EventBaseT, typename ContentT = void>
+class EventBase : public EventBaseT {
+public:
+    using content_type = ContentT;
+
+    explicit EventBase(const QJsonObject& json)
+        : EventBaseT(typeId<EventT>, json)
+    {}
+    explicit EventBase(const ContentT& c)
+        : EventBaseT(typeId<EventT>,
+                     EventBaseT::basicJson(typeId<EventT>, toJson(c)))
+    {}
+
+    ContentT content() const { return fromJson<ContentT>(this->contentJson()); }
+};
+
+// Specialisation for an event that doesn't use ContentT parameter
+template <typename EventT, typename EventBaseT>
+class EventBase<EventT, EventBaseT> : public EventBaseT {
+public:
+    explicit EventBase(const QJsonObject& json)
+        : EventBaseT(Quotient::typeId<EventT>, json)
+    {}
+};
 
 /// \brief Define a new event class with a single key-value pair in the content
 ///
@@ -301,22 +350,19 @@ using Events = EventsArray<Event>;
 /// To retrieve the value the getter uses a JSON key name that corresponds to
 /// its own (getter's) name but written in snake_case. \p GetterName_ must be
 /// in camelCase, no quotes (an identifier, not a literal).
-#define DEFINE_SIMPLE_EVENT(Name_, Base_, TypeId_, ValueType_, GetterName_)     \
-    class QUOTIENT_API Name_ : public Base_ {                                   \
-    public:                                                                     \
-        using content_type = ValueType_;                                        \
-        DEFINE_EVENT_TYPEID(TypeId_, Name_)                                     \
-        explicit Name_(const QJsonObject& obj) : Base_(TypeId, obj) {}          \
-        explicit Name_(const content_type& content)                             \
-            : Name_(Base_::basicJson(TypeId, { { JsonKey, toJson(content) } })) \
-        {}                                                                      \
-        auto GetterName_() const                                                \
-        {                                                                       \
-            return contentPart<content_type>(JsonKey);                          \
-        }                                                                       \
-        static inline const auto JsonKey = toSnakeCase(#GetterName_##_ls);      \
-    };                                                                          \
-    REGISTER_EVENT_TYPE(Name_)                                                  \
+#define DEFINE_SIMPLE_EVENT(Name_, Base_, TypeId_, ValueType_, GetterName_,   \
+                            JsonKey_)                                         \
+    constexpr auto Name_##ContentKey = JsonKey_##_ls;                         \
+    class QUOTIENT_API Name_                                                  \
+        : public EventBase<                                                   \
+              Name_, Base_,                                                   \
+              EventContent::SingleKeyValue<ValueType_, &Name_##ContentKey>> { \
+    public:                                                                   \
+        DEFINE_EVENT_TYPEID(TypeId_, Name_)                                   \
+        using value_type = ValueType_;                                        \
+        using EventBase::EventBase;                                           \
+        QUO_CONTENT_GETTER_IMPL(ValueType_, GetterName_, Name_##ContentKey)   \
+    };                                                                        \
     // End of macro
 
 // === is<>(), eventCast<>() and switchOnType<>() ===
@@ -324,7 +370,7 @@ using Events = EventsArray<Event>;
 template <class EventT>
 inline bool is(const Event& e)
 {
-    return e.type() == typeId<EventT>();
+    return e.type() == typeId<EventT>;
 }
 
 inline bool isUnknown(const Event& e)

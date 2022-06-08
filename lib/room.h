@@ -772,9 +772,9 @@ public:
     {
         QT_IGNORE_DEPRECATIONS(
             const auto* evt = eventCast<const EvT>(
-                getCurrentState(EvT::matrixTypeId(), stateKey));)
+                getCurrentState(typeId<EvT>, stateKey));)
         Q_ASSERT(evt);
-        Q_ASSERT(evt->matrixTypeId() == EvT::matrixTypeId()
+        Q_ASSERT(evt->matrixType() == typeId<EvT>
                  && evt->stateKey() == stateKey);
         return evt;
     }

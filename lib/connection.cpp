@@ -182,7 +182,7 @@ public:
     template <typename EventT>
     EventT* unpackAccountData() const
     {
-        const auto& eventIt = accountData.find(EventT::matrixTypeId());
+        const auto& eventIt = accountData.find(typeId<EventT>);
         return eventIt == accountData.end()
                    ? nullptr
                    : weakPtrCast<EventT>(eventIt->second);
@@ -1676,7 +1676,7 @@ bool Connection::isIgnored(const User* user) const
 IgnoredUsersList Connection::ignoredUsers() const
 {
     const auto* event = d->unpackAccountData<IgnoredUsersEvent>();
-    return event ? event->ignored_users() : IgnoredUsersList();
+    return event ? event->ignoredUsers() : IgnoredUsersList();
 }
 
 void Connection::addToIgnoredUsers(const User* user)
@@ -2363,8 +2363,7 @@ std::unique_ptr<EncryptedEvent> Connection::Private::makeEventForSessionKey(
     // qDebug(E2EE) << "Creating the payload for" << data->userId() << device <<
     // sessionId << sessionKey.toHex();
     const auto event = makeEvent<RoomKeyEvent>("m.megolm.v1.aes-sha2", roomId,
-                                               sessionId, sessionKey,
-                                               data->userId());
+                                               sessionId, sessionKey);
     auto payloadJson = event->fullJson();
     payloadJson.insert("recipient"_ls, targetUserId);
     payloadJson.insert(SenderKeyL, data->userId());

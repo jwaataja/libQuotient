@@ -10,12 +10,11 @@ class QUOTIENT_API RoomTombstoneEvent : public StateEventBase {
 public:
     DEFINE_EVENT_TYPEID("m.room.tombstone", RoomTombstoneEvent)
 
-    explicit RoomTombstoneEvent(const QJsonObject& obj)
-        : StateEventBase(typeId(), obj)
+    RoomTombstoneEvent(const QJsonObject& json)
+        : StateEventBase(TypeId, json)
     {}
 
     QString serverMessage() const;
     QString successorRoomId() const;
 };
-REGISTER_EVENT_TYPE(RoomTombstoneEvent)
 } // namespace Quotient

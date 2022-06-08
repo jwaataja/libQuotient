@@ -162,7 +162,7 @@ bool TestSuite::validatePendingEvent(const QString& txnId)
     return it != targetRoom->pendingEvents().end()
            && it->deliveryStatus() == EventStatus::Submitted
            && (*it)->transactionId() == txnId && is<EventT>(**it)
-           && (*it)->matrixType() == EventT::matrixTypeId();
+           && (*it)->matrixType() == EventT::TypeId;
 }
 
 void TestSuite::finishTest(const TestToken& token, bool condition,
@@ -523,7 +523,8 @@ bool TestSuite::checkFileSendingOutcome(const TestToken& thisTest,
     return true;
 }
 
-DEFINE_SIMPLE_EVENT(CustomEvent, RoomEvent, "quotest.custom", int, testValue)
+DEFINE_SIMPLE_EVENT(CustomEvent, RoomEvent, "quotest.custom", int, testValue,
+                    "test_value")
 
 TEST_IMPL(sendCustomEvent)
 {

@@ -1340,7 +1340,7 @@ void Room::setTags(TagsMap newTags, ActionScope applyOn)
 
     d->setTags(move(newTags));
     connection()->callApi<SetAccountDataPerRoomJob>(
-        localUser()->id(), id(), TagEvent::matrixTypeId(),
+        localUser()->id(), id(), typeId<TagEvent>,
         TagEvent(d->tags).contentJson());
 
     if (propagate) {
@@ -2606,15 +2606,15 @@ RoomEventPtr makeRedacted(const RoomEvent& target,
     // clang-format on
 
     static const std::pair<event_type_t, QStringList> keepContentKeysMap[] {
-        { RoomMemberEvent::typeId(), { QStringLiteral("membership") } },
-        { RoomCreateEvent::typeId(), { QStringLiteral("creator") } },
-        { RoomPowerLevelsEvent::typeId(),
+        { typeId<RoomMemberEvent>, { QStringLiteral("membership") } },
+        { typeId<RoomCreateEvent>, { QStringLiteral("creator") } },
+        { typeId<RoomPowerLevelsEvent>,
           { QStringLiteral("ban"), QStringLiteral("events"),
             QStringLiteral("events_default"), QStringLiteral("kick"),
             QStringLiteral("redact"), QStringLiteral("state_default"),
             QStringLiteral("users"), QStringLiteral("users_default") } }
-        //        , { RoomJoinRules::typeId(), { QStringLiteral("join_rule") } }
-        //        , { RoomHistoryVisibility::typeId(),
+        //        , { typeId<RoomJoinRules>, { QStringLiteral("join_rule") } }
+        //        , { typeId<RoomHistoryVisibility>,
         //                { QStringLiteral("history_visibility") } }
     };
     for (auto it = originalJson.begin(); it != originalJson.end();) {
@@ -3281,7 +3281,7 @@ Room::Changes Room::processAccountDataEvent(EventPtr&& event)
     }
 
     if (auto* evt = eventCast<const ReadMarkerEvent>(event))
-        changes |= d->setFullyReadMarker(evt->event_id());
+        changes |= d->setFullyReadMarker(evt->eventId());
 
     // For all account data events
     auto& currentData = d->accountData[event->matrixType()];

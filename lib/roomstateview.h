@@ -44,8 +44,8 @@ public:
     const EvT* get(const QString& stateKey = {}) const
     {
         static_assert(std::is_base_of_v<StateEventBase, EvT>);
-        if (const auto* evt = get(EvT::matrixTypeId(), stateKey)) {
-            Q_ASSERT(evt->matrixType() == EvT::matrixTypeId()
+        if (const auto* evt = get(typeId<EvT>, stateKey)) {
+            Q_ASSERT(evt->matrixType() == typeId<EvT>
                      && evt->stateKey() == stateKey);
             return eventCast<const EvT>(evt);
         }
@@ -59,7 +59,7 @@ public:
     template <typename EvT>
     bool contains(const QString& stateKey = {}) const
     {
-        return contains(EvT::matrixTypeId(), stateKey);
+        return contains(typeId<EvT>, stateKey);
     }
 
     //! \brief Get the content of the current state event with the given

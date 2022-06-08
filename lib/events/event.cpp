@@ -11,15 +11,31 @@ using namespace Quotient;
 
 QString EventTypeRegistry::getMatrixType(event_type_t typeId) { return typeId; }
 
-void _impl::EventFactoryBase::logAddingMethod(event_type_t TypeId,
-                                              size_t newSize)
+bool _impl::EventFactoryBase::isMethodRegistered(event_type_t matrixType,
+                                                 const char* className,
+                                                 const char* registeredClassName,
+                                                 size_t currentSize) const
 {
-    qDebug(EVENTS) << "Adding factory method for" << TypeId << "events;"
-                   << newSize << "methods will be in the" << name
-                   << "chain";
+    if (Q_LIKELY(!registeredClassName)) {
+        qDebug(EVENTS).nospace()
+            << "Registering " << matrixType << " -> " << className << "; "
+            << currentSize + 1 << " method(s) will be in the " << name
+            << " chain";
+        return false;
+    }
+    if (registeredClassName != className)
+        qCritical(EVENTS) << "Attempt to register" << className << "for"
+                          << matrixType << "events for which"
+                          << registeredClassName << "is already registered";
+    else
+        qDebug(EVENTS) << "Already registered" << className << "for"
+                       << matrixType;
+    return true;
 }
 
-Event::Event(Type type, const QJsonObject& json) : _type(type), _json(json)
+Event::Event(Type type, const QJsonObject& json)
+    : _type(json[TypeKeyL] == type ? type : UnknownEventTypeId)
+    , _json(json)
 {
     if (!json.contains(ContentKeyL)
         && !json.value(UnsignedKeyL).toObject().contains(RedactedCauseKeyL)) {
@@ -27,10 +43,6 @@ Event::Event(Type type, const QJsonObject& json) : _type(type), _json(json)
         qCWarning(EVENTS) << formatJson << json;
     }
 }
-
-Event::Event(Type type, event_mtype_t matrixType, const QJsonObject& contentJson)
-    : Event(type, basicJson(matrixType, contentJson))
-{}
 
 Event::~Event() = default;
 
