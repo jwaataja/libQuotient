@@ -142,8 +142,8 @@ enum UriResolveResult : short {
 };
 Q_ENUM_NS(UriResolveResult)
 
-enum RoomType {
-    Space,
+enum RoomType : uint8_t {
+    Space = 0,
     Undefined,
 };
 Q_ENUM_NS(RoomType)
