@@ -46,6 +46,9 @@ namespace _impl {
     };
 }
 
+template <typename PodT, typename JsonT>
+PodT fromJson(const JsonT&);
+
 //! \brief The switchboard for extra conversion algorithms behind from/toJson
 //!
 //! This template is mainly intended for partial conversion specialisations
@@ -68,7 +71,7 @@ struct JsonConverter : _impl::JsonExporter<T> {
     // (non-SFINAE) compilation error if the member is not there. Hence a bit
     // more verbose SFINAE construct in _impl::JsonExporter.
 
-    static T doLoad(const QJsonObject& jo)
+    static T load(const QJsonObject& jo)
     {
         // 'else' below are required to suppress code generation for unused
         // branches - 'return' is not enough
@@ -82,21 +85,22 @@ struct JsonConverter : _impl::JsonExporter<T> {
             return pod;
         }
     }
-    static T load(const QJsonValue& jv) { return doLoad(jv.toObject()); }
-    static T load(const QJsonDocument& jd) { return doLoad(jd.object()); }
+    // By default, revert to fromJson() so that one could provide a single
+    // fromJson specialisation instead of specialising the entire JsonConverter
+    static T load(const QJsonValue& jv) { return fromJson<T>(jv.toObject()); }
+    static T load(const QJsonDocument& jd) { return fromJson<T>(jd.object()); }
 };
 
-template <typename T,
-          typename = std::enable_if_t<!std::is_constructible_v<QJsonValue, T>>>
+template <typename T>
 inline auto toJson(const T& pod)
 // -> can return anything from which QJsonValue or, in some cases, QJsonDocument
 //    is constructible
 {
-    return JsonConverter<T>::dump(pod);
+    if constexpr (std::is_constructible_v<QJsonValue, T>)
+        return pod; // No-op if QJsonValue can be directly constructed
+    else
+        return JsonConverter<T>::dump(pod);
 }
-
-inline auto toJson(const QJsonObject& jo) { return jo; }
-inline auto toJson(const QJsonValue& jv) { return jv; }
 
 template <typename T>
 inline void fillJson(QJsonObject& json, const T& data)
@@ -104,19 +108,12 @@ inline void fillJson(QJsonObject& json, const T& data)
     JsonObjectConverter<T>::dumpTo(json, data);
 }
 
-template <typename T>
-inline T fromJson(const QJsonValue& jv)
+template <typename PodT, typename JsonT>
+inline PodT fromJson(const JsonT& json)
 {
-    return JsonConverter<T>::load(jv);
-}
-
-template<>
-inline QJsonValue fromJson(const QJsonValue& jv) { return jv; }
-
-template <typename T>
-inline T fromJson(const QJsonDocument& jd)
-{
-    return JsonConverter<T>::load(jd);
+    // JsonT here can be whatever the respective JsonConverter specialisation
+    // accepts but by default it's QJsonValue, QJsonDocument, or QJsonObject
+    return JsonConverter<PodT>::load(json);
 }
 
 // Convenience fromJson() overloads that deduce T instead of requiring
