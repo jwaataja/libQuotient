@@ -86,33 +86,6 @@ inline EventPtr doLoadEvent(const QJsonObject& json, const QString& matrixType)
     return Event::factory.loadEvent(json, matrixType);
 }
 
-class QUOTIENT_API CallEventBase : public RoomEvent {
-public:
-    CallEventBase(Type type, const QJsonObject& json);
-    ~CallEventBase() override = default;
-    bool isCallEvent() const override { return true; }
-
-    QUO_CONTENT_GETTER(QString, callId)
-    QUO_CONTENT_GETTER(int, version)
-
-protected:
-    static QJsonObject basicJson(const QString& matrixType,
-                                 const QString& callId, int version,
-                                 QJsonObject contentJson = {});
-};
-
-template <typename EventT>
-class EventBase<EventT, CallEventBase> : public CallEventBase {
-public:
-    EventBase(const QJsonObject& json)
-        : CallEventBase(typeId<EventT>, json)
-    {}
-    explicit EventBase(const QString& callId,
-                       const QJsonObject& contentJson = {})
-        : EventBase(basicJson(typeId<EventT>, callId, 0, contentJson))
-    {}
-};
-
 } // namespace Quotient
 Q_DECLARE_METATYPE(Quotient::RoomEvent*)
 Q_DECLARE_METATYPE(const Quotient::RoomEvent*)

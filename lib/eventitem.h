@@ -7,6 +7,7 @@
 
 #include "events/filesourceinfo.h"
 #include "events/stateevent.h"
+#include "events/callevent.h"
 
 #include <any>
 #include <utility>
@@ -101,9 +102,9 @@ inline const StateEventBase* EventItemBase::viewAs<StateEventBase>() const
 }
 
 template <>
-inline const CallEventBase* EventItemBase::viewAs<CallEventBase>() const
+inline const CallEvent* EventItemBase::viewAs<CallEvent>() const
 {
-    return evt->isCallEvent() ? weakPtrCast<const CallEventBase>(evt) : nullptr;
+    return evt->isCallEvent() ? weakPtrCast<const CallEvent>(evt) : nullptr;
 }
 
 class QUOTIENT_API PendingEventItem : public EventItemBase {
