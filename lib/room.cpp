@@ -1337,7 +1337,7 @@ void Room::setTags(TagsMap newTags, ActionScope applyOn)
     d->setTags(move(newTags));
     connection()->callApi<SetAccountDataPerRoomJob>(
         localUser()->id(), id(), typeId<TagEvent>,
-        TagEvent(d->tags).contentJson());
+        Quotient::toJson(TagEvent::content_type { d->tags }));
 
     if (propagate) {
         for (auto* r = this; (r = r->successor(joinStates));)
