@@ -11,10 +11,10 @@ namespace Quotient {
 
 class Room;
 
-class RoomStateView : private QHash<StateEventKey, const StateEventBase*> {
+class RoomStateView : private QHash<StateEventKey, const StateEvent*> {
     Q_GADGET
 public:
-    const QHash<StateEventKey, const StateEventBase*>& events() const
+    const QHash<StateEventKey, const StateEvent*>& events() const
     {
         return *this;
     }
@@ -29,8 +29,8 @@ public:
     //!          have to check that it has_value() before using. Alternatively
     //!          you can now use queryCurrentState() to access state safely.
     //! \sa getCurrentStateContentJson
-    const StateEventBase* get(const QString& evtType,
-                              const QString& stateKey = {}) const;
+    const StateEvent* get(const QString& evtType,
+                          const QString& stateKey = {}) const;
 
     //! \brief Get a state event with the given event type and state key
     //!
@@ -43,7 +43,7 @@ public:
     template <typename EvT>
     const EvT* get(const QString& stateKey = {}) const
     {
-        static_assert(std::is_base_of_v<StateEventBase, EvT>);
+        static_assert(std::is_base_of_v<StateEvent, EvT>);
         if (const auto* evt = get(typeId<EvT>, stateKey)) {
             Q_ASSERT(evt->matrixType() == typeId<EvT>
                      && evt->stateKey() == stateKey);
@@ -66,7 +66,7 @@ public:
     auto content(const QString& stateKey,
                  typename EvT::content_type defaultValue = {}) const
     {
-        // StateEvent<>::content is special in that it returns a const-ref,
+        // EventBase<>::content is special in that it returns a const-ref,
         // and lift() inside queryOr() can't wrap that in a temporary Omittable.
         if (const auto evt = get<EvT>(stateKey))
             return evt->content();
@@ -91,8 +91,7 @@ public:
     //!
     //! This method returns all known state events that have occured in
     //! the room of the given type.
-    const QVector<const StateEventBase*>
-    eventsOfType(const QString& evtType) const;
+    const QVector<const StateEvent*> eventsOfType(const QString& evtType) const;
 
     template <typename FnT>
     auto query(const QString& evtType, const QString& stateKey, FnT&& fn) const
@@ -104,7 +103,7 @@ public:
     auto query(const QString& stateKey, FnT&& fn) const
     {
         using EventT = std::decay_t<fn_arg_t<FnT>>;
-        static_assert(std::is_base_of_v<StateEventBase, EventT>);
+        static_assert(std::is_base_of_v<StateEvent, EventT>);
         return lift(std::forward<FnT>(fn), get<EventT>(stateKey));
     }
 
@@ -126,7 +125,7 @@ public:
     auto queryOr(const QString& stateKey, FnT&& fn, FallbackT&& fallback) const
     {
         using EventT = std::decay_t<fn_arg_t<FnT>>;
-        static_assert(std::is_base_of_v<StateEventBase, EventT>);
+        static_assert(std::is_base_of_v<StateEvent, EventT>);
         return lift(std::forward<FnT>(fn), get<EventT>(stateKey))
             .value_or(std::forward<FallbackT>(fallback));
     }

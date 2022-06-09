@@ -7,12 +7,12 @@
 #include "quotient_common.h"
 
 namespace Quotient {
-class QUOTIENT_API RoomCreateEvent : public StateEventBase {
+class QUOTIENT_API RoomCreateEvent : public StateEvent {
 public:
     DEFINE_EVENT_TYPEID("m.room.create", RoomCreateEvent)
 
     explicit RoomCreateEvent(const QJsonObject& obj)
-        : StateEventBase(TypeId, obj)
+        : StateEvent(TypeId, obj)
     {}
 
     struct Predecessor {

@@ -5,7 +5,7 @@
 
 using namespace Quotient;
 
-StateEventBase::StateEventBase(Type type, const QJsonObject& json)
+StateEvent::StateEvent(Type type, const QJsonObject& json)
     : RoomEvent(json.contains(StateKeyKeyL) ? type : UnknownEventTypeId, json)
 {
     if (Event::type() == UnknownEventTypeId && !json.contains(StateKeyKeyL))
@@ -13,23 +13,22 @@ StateEventBase::StateEventBase(Type type, const QJsonObject& json)
                             "forcing the event type to unknown to avoid damage";
 }
 
-StateEventBase::StateEventBase(Event::Type type, const QString& stateKey,
+StateEvent::StateEvent(Event::Type type, const QString& stateKey,
                                const QJsonObject& contentJson)
     : RoomEvent(type, basicJson(type, contentJson, stateKey))
 {}
 
-bool StateEventBase::repeatsState() const
+bool StateEvent::repeatsState() const
 {
-    const auto prevContentJson = unsignedPart(PrevContentKeyL);
-    return fullJson().value(ContentKeyL) == prevContentJson;
+    return contentJson() == unsignedPart<QJsonObject>(PrevContentKeyL);
 }
 
-QString StateEventBase::replacedState() const
+QString StateEvent::replacedState() const
 {
     return unsignedPart<QString>("replaces_state"_ls);
 }
 
-void StateEventBase::dumpTo(QDebug dbg) const
+void StateEvent::dumpTo(QDebug dbg) const
 {
     if (!stateKey().isEmpty())
         dbg << '<' << stateKey() << "> ";

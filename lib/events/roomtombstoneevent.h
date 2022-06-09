@@ -6,12 +6,12 @@
 #include "stateevent.h"
 
 namespace Quotient {
-class QUOTIENT_API RoomTombstoneEvent : public StateEventBase {
+class QUOTIENT_API RoomTombstoneEvent : public StateEvent {
 public:
     DEFINE_EVENT_TYPEID("m.room.tombstone", RoomTombstoneEvent)
 
     RoomTombstoneEvent(const QJsonObject& json)
-        : StateEventBase(TypeId, json)
+        : StateEvent(TypeId, json)
     {}
 
     QString serverMessage() const;

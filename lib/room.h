@@ -757,9 +757,8 @@ public:
      */
     [[deprecated("Use currentState().get() instead; "
                  "make sure to check its result for nullptrs")]] //
-    const Quotient::StateEventBase*
-    getCurrentState(const QString& evtType,
-                    const QString& stateKey = {}) const;
+    const StateEvent* getCurrentState(const QString& evtType,
+                                      const QString& stateKey = {}) const;
 
     /// Get a state event with the given event type and state key
     /*! This is a typesafe overload that accepts a C++ event type instead of
@@ -783,7 +782,7 @@ public:
     RoomStateView currentState() const;
 
     //! Send a request to update the room state with the given event
-    SetRoomStateWithKeyJob* setState(const StateEventBase& evt);
+    SetRoomStateWithKeyJob* setState(const StateEvent& evt);
 
     //! \brief Set a state event of the given type with the given arguments
     //!
