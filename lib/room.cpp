@@ -1988,7 +1988,7 @@ RoomEvent* Room::Private::addAsPending(RoomEventPtr&& event)
         event->setRoomId(id);
     if (event->senderId().isEmpty())
         event->setSender(connection->userId());
-    auto* pEvent = rawPtr(event);
+    auto* pEvent = std::to_address(event);
     emit q->pendingEventAboutToAdd(pEvent);
     unsyncedEvents.emplace_back(move(event));
     emit q->pendingEventAdded();
@@ -2689,7 +2689,7 @@ bool Room::Private::processRedaction(const RedactionEvent& redaction)
         }
     }
     q->onRedaction(*oldEvent, *ti);
-    emit q->replacedEvent(ti.event(), rawPtr(oldEvent));
+    emit q->replacedEvent(ti.event(), std::to_address(oldEvent));
     // By now, all references to oldEvent must have been updated to ti.event()
     return true;
 }
@@ -2740,7 +2740,7 @@ bool Room::Private::processReplacement(const RoomMessageEvent& newEvent)
     // instead of the redacted one. oldEvent will be deleted on return.
     auto oldEvent = ti.replaceEvent(makeReplaced(*ti, newEvent));
     qCDebug(STATE) << "Replaced" << oldEvent->id() << "with" << newEvent.id();
-    emit q->replacedEvent(ti.event(), rawPtr(oldEvent));
+    emit q->replacedEvent(ti.event(), std::to_address(oldEvent));
     return true;
 }
 
