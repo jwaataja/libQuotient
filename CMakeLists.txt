@@ -6,6 +6,9 @@ endif()
 set(API_VERSION "0.7")
 project(Quotient VERSION "${API_VERSION}.0" LANGUAGES CXX)
 
+# Export compile_commands.json for completion engines.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 message(STATUS)
 message(STATUS "Configuring ${PROJECT_NAME} ${PROJECT_VERSION} ==>")
 
@@ -13,7 +16,7 @@ include(FeatureSummary)
 include(CTest)
 
 # https://github.com/quotient-im/libQuotient/issues/369
-option(${PROJECT_NAME}_ENABLE_E2EE "end-to-end encryption (E2EE) support" OFF)
+option(${PROJECT_NAME}_ENABLE_E2EE "end-to-end encryption (E2EE) support" ON)
 add_feature_info(EnableE2EE ${PROJECT_NAME}_ENABLE_E2EE
                  "end-to-end encryption (WORK IN PROGRESS)")
 
@@ -98,6 +101,52 @@ if (${PROJECT_NAME}_ENABLE_E2EE)
     if (Olm_FOUND)
         message(STATUS "Using libOlm ${Olm_VERSION} at ${Olm_DIR}")
     endif()
+
+    find_package(Git QUIET)
+    if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+        # Update submodules as needed.
+        option(GIT_SUBMODULE "Check submodules during build" ON)
+        if(GIT_SUBMODULE)
+            message(STATUS "Submodule update")
+            execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                RESULT_VARIABLE GIT_SUBMOD_RESULT)
+            if(NOT GIT_SUBMOD_RESULT EQUAL "0")
+                message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+            endif()
+        endif()
+    endif()
+
+    # include(FetchContent)
+    # FetchContent_Declare(
+        # rusty_cmake
+        # GIT_REPOSITORY https://github.com/trondhe/rusty_cmake.git
+        # GIT_TAG main
+    # )
+# 
+    # FetchContent_MakeAvailable(rusty_cmake)
+
+    # add_subdirectory(extern/rusty_cmake)
+
+    # add_library_rust(
+        # PATH extern/vodozemac-bindings/cpp
+        # NAMESPACE vodozemac_bindings
+        # CXX_BRIDGE_SOURCE_FILE cpp/src/lib.rs
+    # )
+    set(VODOZEMAC_DIR "extern/vodozemac-bindings/cpp")
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(CARGO_CMD cargo build)
+        set(TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/debug")
+    else ()
+        set(CARGO_CMD cargo build --release)
+        set(TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/release")
+    endif ()
+
+    add_custom_target(vodozemac ALL
+        COMMENT "Compiling vodozemac module"
+        COMMAND CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR} ${CARGO_CMD}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${VODOZEMAC_DIR}")
+    set_target_properties(vodozemac PROPERTIES LOCATION ${CMAKE_CURRENT_BINARY_DIR})
 
     find_package(OpenSSL 1.1.0 REQUIRED)
     set_package_properties(OpenSSL PROPERTIES
@@ -312,6 +361,11 @@ if (${PROJECT_NAME}_ENABLE_E2EE)
     set(FIND_DEPS "find_dependency(Olm)
     find_dependency(OpenSSL)
     find_dependency(${Qt}Sql)") # For QuotientConfig.cmake.in
+    add_dependencies(${PROJECT_NAME} vodozemac)
+    message( "${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}")
+    message("${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}/libvodozemac.a")
+    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/vodozemac/src)
+    target_link_libraries(${PROJECT_NAME} ${TARGET_DIR}/libvodozemac.a)
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${QTKEYCHAIN_INCLUDE_DIRS})

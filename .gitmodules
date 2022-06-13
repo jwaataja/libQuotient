@@ -1,3 +1,6 @@
 [submodule "gtad/gtad"]
 	path = gtad/gtad
 	url = https://github.com/quotient-im/gtad.git
+[submodule "extern/vodozemac-bindings"]
+	path = extern/vodozemac-bindings
+	url = https://github.com/matrix-org/vodozemac-bindings.git
