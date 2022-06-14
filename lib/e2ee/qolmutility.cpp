@@ -25,21 +25,6 @@ QOlmUtility::~QOlmUtility()
     delete[](reinterpret_cast<uint8_t *>(m_utility));
 }
 
-QString QOlmUtility::sha256Bytes(const QByteArray &inputBuf) const
-{
-    const auto outputLen = olm_sha256_length(m_utility);
-    QByteArray outputBuf(outputLen, '0');
-    olm_sha256(m_utility, inputBuf.data(), inputBuf.length(),
-            outputBuf.data(), outputBuf.length());
-
-    return QString::fromUtf8(outputBuf);
-}
-
-QString QOlmUtility::sha256Utf8Msg(const QString &message) const
-{
-    return sha256Bytes(message.toUtf8());
-}
-
 QOlmExpected<bool> QOlmUtility::ed25519Verify(const QByteArray& key,
                                               const QByteArray& message,
                                               const QByteArray& signature)

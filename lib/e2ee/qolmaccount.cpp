@@ -8,6 +8,7 @@
 #include "e2ee/qolmsession.h"
 #include "e2ee/qolmutility.h"
 #include "e2ee/qolmutils.h"
+#include "lib.rs.h"
 
 #include "csapi/keys.h"
 
@@ -17,6 +18,34 @@
 
 using namespace Quotient;
 
+// Converts rust::String to QByteArray.
+QByteArray rustStrToByteArr(const rust::String& str)
+{
+    // Opportunity for optimization.
+    return QByteArray::fromStdString(std::string(str));
+}
+
+using PicklingKey = std::array<std::uint8_t, 32>;
+
+PicklingKey picklingModeToKey(const PicklingMode& mode)
+{
+    PicklingKey result;
+    result.fill(0);
+    if (std::holds_alternative<Quotient::Encrypted>(mode)) {
+        auto it = result.begin();
+        for (auto b : std::get<Encrypted>(mode).key) {
+            if (it == result.end()) {
+                break;
+            }
+
+            *it = b;
+            ++it;
+        }
+    }
+
+    return result;
+}
+
 // Convert olm error to enum
 QOlmError lastError(OlmAccount *account) {
     return fromString(olm_account_last_error(account));
@@ -25,52 +54,32 @@ QOlmError lastError(OlmAccount *account) {
 QOlmAccount::QOlmAccount(const QString& userId, const QString& deviceId,
                          QObject* parent)
     : QObject(parent)
+    , m_account(std::nullopt)
     , m_userId(userId)
     , m_deviceId(deviceId)
 {}
 
-QOlmAccount::~QOlmAccount()
-{
-    olm_clear_account(m_account);
-    delete[](reinterpret_cast<uint8_t *>(m_account));
-}
-
 void QOlmAccount::createNewAccount()
 {
-    m_account = olm_account(new uint8_t[olm_account_size()]);
-    size_t randomSize = olm_create_account_random_length(m_account);
-    QByteArray randomData = getRandom(randomSize);
-    const auto error = olm_create_account(m_account, randomData.data(), randomSize);
-    if (error == olm_error()) {
-        throw lastError(m_account);
-    }
+    m_account = olm::new_account();
     emit needsSave();
 }
 
 void QOlmAccount::unpickle(QByteArray &pickled, const PicklingMode &mode)
 {
-    m_account = olm_account(new uint8_t[olm_account_size()]);
-    const QByteArray key = toKey(mode);
-    const auto error = olm_unpickle_account(m_account, key.data(), key.length(), pickled.data(), pickled.size());
-    if (error == olm_error()) {
+    try {
+        m_account =
+            olm::account_from_pickle(pickled.data(), picklingModeToKey(mode));
+    } catch (const std::exception& e) {
         qCWarning(E2EE) << "Failed to unpickle olm account";
-        //TODO: Do something that is not dying
-        // Probably log the user out since we have no way of getting to the keys
-        //throw lastError(m_account);
+        // TODO: Do something that is not dying
+        //  Probably log the user out since we have no way of getting to the keys
     }
 }
 
 QOlmExpected<QByteArray> QOlmAccount::pickle(const PicklingMode &mode)
 {
-    const QByteArray key = toKey(mode);
-    const size_t pickleLength = olm_pickle_account_length(m_account);
-    QByteArray pickleBuffer(pickleLength, '0');
-    const auto error = olm_pickle_account(m_account, key.data(),
-                key.length(), pickleBuffer.data(), pickleLength);
-    if (error == olm_error()) {
-        return lastError(m_account);
-    }
-    return pickleBuffer;
+    return rustStrToByteArr(m_account.value()->pickle(picklingModeToKey(mode)));
 }
 
 IdentityKeys QOlmAccount::identityKeys() const

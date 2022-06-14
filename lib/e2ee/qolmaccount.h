@@ -7,6 +7,7 @@
 
 #include "e2ee/e2ee.h"
 #include "e2ee/qolmmessage.h"
+#include "lib.rs.h"
 
 #include "csapi/keys.h"
 
@@ -24,8 +25,8 @@ class QUOTIENT_API QOlmAccount : public QObject
 {
     Q_OBJECT
 public:
-    QOlmAccount(const QString &userId, const QString &deviceId, QObject *parent = nullptr);
-    ~QOlmAccount() override;
+    QOlmAccount(const QString& userId, const QString& deviceId,
+                QObject* parent = nullptr);
 
     //! Creates a new instance of OlmAccount. During the instantiation
     //! the Ed25519 fingerprint key pair and the Curve25519 identity key
@@ -38,7 +39,8 @@ public:
     //! This needs to be called before any other action or use createNewAccount() instead.
     void unpickle(QByteArray &pickled, const PicklingMode &mode);
 
-    //! Serialises an OlmAccount to encrypted Base64.
+    //! Serialises an OlmAccount to encrypted Base64. This function cannot
+    //! fail.
     QOlmExpected<QByteArray> pickle(const PicklingMode &mode);
 
     //! Returns the account's public identity keys already formatted as JSON
@@ -102,7 +104,7 @@ Q_SIGNALS:
     void needsSave();
 
 private:
-    OlmAccount *m_account = nullptr; // owning
+    std::optional<rust::Box<olm::Account>> m_account;
     QString m_userId;
     QString m_deviceId;
 };
