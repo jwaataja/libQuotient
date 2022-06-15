@@ -18,11 +18,29 @@
 
 using namespace Quotient;
 
-// Converts rust::String to QByteArray.
 QByteArray rustStrToByteArr(const rust::String& str)
 {
-    // Opportunity for optimization.
-    return QByteArray::fromStdString(std::string(str));
+    return QByteArray(str.data(), str.length());
+}
+
+QString rustStrToQStr(const rust::String& str)
+{
+    return QString::fromUtf8(str.data(), str.length());
+}
+
+std::logic_error notImplemented(std::string_view functionName)
+{
+    std::string message("called unimplemented function ");
+    message += functionName;
+    return std::logic_error(message);
+}
+
+// Converts an exception thrown by vodozemac into a QOlmError.
+QOlmError toQOlmError(const std::exception& e)
+{
+    // TODO: Would the fromString functoin work here? It expects strings from
+    // libOlm, which might differ from vodozemac.
+    return Quotient::Unknown;
 }
 
 using PicklingKey = std::array<std::uint8_t, 32>;
@@ -38,8 +56,7 @@ PicklingKey picklingModeToKey(const PicklingMode& mode)
                 break;
             }
 
-            *it = b;
-            ++it;
+            *it++ = b;
         }
     }
 
@@ -84,30 +101,15 @@ QOlmExpected<QByteArray> QOlmAccount::pickle(const PicklingMode &mode)
 
 IdentityKeys QOlmAccount::identityKeys() const
 {
-    const size_t keyLength = olm_account_identity_keys_length(m_account);
-    QByteArray keyBuffer(keyLength, '0');
-    const auto error = olm_account_identity_keys(m_account, keyBuffer.data(), keyLength);
-    if (error == olm_error()) {
-        throw lastError(m_account);
-    }
-    const QJsonObject key = QJsonDocument::fromJson(keyBuffer).object();
-    return IdentityKeys {
-        key.value(QStringLiteral("curve25519")).toString().toUtf8(),
-        key.value(QStringLiteral("ed25519")).toString().toUtf8()
-    };
+    return { rustStrToByteArr(m_account.value()->curve25519_key()->to_base64()),
+             rustStrToByteArr(
+                 m_account.value()->curve25519_key()->to_base64()) };
 }
 
 QByteArray QOlmAccount::sign(const QByteArray &message) const
 {
-    QByteArray signatureBuffer(olm_account_signature_length(m_account), '0');
-
-    const auto error = olm_account_sign(m_account, message.data(), message.length(),
-            signatureBuffer.data(), signatureBuffer.length());
-
-    if (error == olm_error()) {
-        throw lastError(m_account);
-    }
-    return signatureBuffer;
+    return rustStrToByteArr(
+        m_account.value()->sign(message.data())->to_base64());
 }
 
 QByteArray QOlmAccount::sign(const QJsonObject &message) const
@@ -131,39 +133,25 @@ QByteArray QOlmAccount::signIdentityKeys() const
 
 size_t QOlmAccount::maxNumberOfOneTimeKeys() const
 {
-    return olm_account_max_number_of_one_time_keys(m_account);
+    return m_account.value()->max_number_of_one_time_keys();
 }
 
 size_t QOlmAccount::generateOneTimeKeys(size_t numberOfKeys)
 {
-    const size_t randomLength =
-        olm_account_generate_one_time_keys_random_length(m_account,
-                                                         numberOfKeys);
-    QByteArray randomBuffer = getRandom(randomLength);
-    const auto error =
-        olm_account_generate_one_time_keys(m_account, numberOfKeys,
-                                           randomBuffer.data(), randomLength);
-
-    if (error == olm_error()) {
-        throw lastError(m_account);
-    }
+    m_account.value()->generate_one_time_keys(numberOfKeys);
     emit needsSave();
-    return error;
+    // TODO: Is this the correct return value?
+    return 0;
 }
 
 UnsignedOneTimeKeys QOlmAccount::oneTimeKeys() const
 {
-    const size_t oneTimeKeyLength = olm_account_one_time_keys_length(m_account);
-    QByteArray oneTimeKeysBuffer(oneTimeKeyLength, '0');
-
-    const auto error = olm_account_one_time_keys(m_account, oneTimeKeysBuffer.data(), oneTimeKeyLength);
-    if (error == olm_error()) {
-        throw lastError(m_account);
+    UnsignedOneTimeKeys keys;
+    for (const auto& key : m_account.value()->one_time_keys()) {
+        keys.keys[Curve25519Key][key.key_id.data()] =
+            rustStrToQStr(key.key->to_base64());
     }
-    const auto json = QJsonDocument::fromJson(oneTimeKeysBuffer).object();
-    UnsignedOneTimeKeys oneTimeKeys;
-    fromJson(json, oneTimeKeys.keys);
-    return oneTimeKeys;
+    return keys;
 }
 
 OneTimeKeys QOlmAccount::signOneTimeKeys(const UnsignedOneTimeKeys &keys) const
@@ -185,16 +173,22 @@ SignedOneTimeKey QOlmAccount::signedOneTimeKey(const QByteArray& key,
 std::optional<QOlmError> QOlmAccount::removeOneTimeKeys(
     const QOlmSession& session)
 {
-    const auto error = olm_remove_one_time_keys(m_account, session.raw());
+    // const auto error = olm_remove_one_time_keys(m_account, session.raw());
+    //
+    // if (error == olm_error()) {
+    // return lastError(m_account);
+    // }
+    // emit needsSave();
+    // return std::nullopt;
 
-    if (error == olm_error()) {
-        return lastError(m_account);
-    }
-    emit needsSave();
-    return std::nullopt;
+    throw notImplemented("QOlmAccount::removeOneTimeKeys");
 }
 
-OlmAccount* QOlmAccount::data() { return m_account; }
+OlmAccount* QOlmAccount::data()
+{
+    // return m_account;
+    throw notImplemented("QOlmAccount::data");
+}
 
 DeviceKeys QOlmAccount::deviceKeys() const
 {
@@ -243,7 +237,7 @@ QOlmExpected<QOlmSessionPtr> QOlmAccount::createOutboundSession(
 
 void QOlmAccount::markKeysAsPublished()
 {
-    olm_account_mark_keys_as_published(m_account);
+    m_account.value()->mark_keys_as_published();
     emit needsSave();
 }
 
