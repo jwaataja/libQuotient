@@ -76,7 +76,7 @@ QOlmError lastError(OlmAccount *account) {
 
 void QOlmAccount::createNewAccount()
 {
-    m_account = std::make_unique<Account>(olm::new_account());
+    m_account = std::make_unique<Account>(Account { olm::new_account() });
     emit needsSave();
 }
 
@@ -93,8 +93,8 @@ QOlmAccount::~QOlmAccount() = default;
 void QOlmAccount::unpickle(QByteArray &pickled, const PicklingMode &mode)
 {
     try {
-        m_account = std::make_unique<Account>(
-            olm::account_from_pickle(pickled.data(), picklingModeToKey(mode)));
+        m_account = std::make_unique<Account>(Account {
+            olm::account_from_pickle(pickled.data(), picklingModeToKey(mode)) });
     } catch (const std::exception& e) {
         qCWarning(E2EE) << "Failed to unpickle olm account";
         // TODO: Do something that is not dying
@@ -105,7 +105,9 @@ void QOlmAccount::unpickle(QByteArray &pickled, const PicklingMode &mode)
 void QOlmAccount::unpickleLibOlm(QByteArray &pickled, const PicklingMode &mode)
 {
     try {
-        m_account = std::make_unique<Account>(olm::account_from_libolm_pickle(pickled.data(), toKey(mode).data()));
+        m_account = std::make_unique<Account>(
+            Account { olm::account_from_libolm_pickle(pickled.data(),
+                                                      toKey(mode).data()) });
     } catch (const std::exception& e) {
         qCWarning(E2EE) << "Failed to unpickle olm account";
         // TODO: Do something that is not dying
