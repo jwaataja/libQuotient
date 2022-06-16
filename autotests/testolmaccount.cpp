@@ -65,7 +65,7 @@ void TestOlmAccount::oneTimeKeysValid()
     QOlmAccount olmAccount(QStringLiteral("@foo:bar.com"), QStringLiteral("QuotientTestDevice"));
     olmAccount.createNewAccount();
     const auto maxNumberOfOneTimeKeys = olmAccount.maxNumberOfOneTimeKeys();
-    QCOMPARE(100, maxNumberOfOneTimeKeys);
+    QCOMPARE(50, maxNumberOfOneTimeKeys);
 
     const auto oneTimeKeysEmpty = olmAccount.oneTimeKeys();
     QVERIFY(oneTimeKeysEmpty.curve25519().isEmpty());

@@ -21,8 +21,6 @@ using namespace Quotient;
 struct QOlmAccount::Account {
     rust::Box<olm::Account> account;
 
-    ~Account();
-
     rust::Box<olm::Account>& value() { return account; }
 };
 
@@ -104,6 +102,17 @@ void QOlmAccount::unpickle(QByteArray &pickled, const PicklingMode &mode)
     }
 }
 
+void QOlmAccount::unpickleLibOlm(QByteArray &pickled, const PicklingMode &mode)
+{
+    try {
+        m_account = std::make_unique<Account>(olm::account_from_libolm_pickle(pickled.data(), toKey(mode).data()));
+    } catch (const std::exception& e) {
+        qCWarning(E2EE) << "Failed to unpickle olm account";
+        // TODO: Do something that is not dying
+        //  Probably log the user out since we have no way of getting to the keys
+    }
+}
+
 QOlmExpected<QByteArray> QOlmAccount::pickle(const PicklingMode &mode)
 {
     return rustStrToByteArr(m_account->value()->pickle(picklingModeToKey(mode)));
@@ -113,7 +122,7 @@ IdentityKeys QOlmAccount::identityKeys() const
 {
     return {
         rustStrToByteArr(m_account->value()->curve25519_key()->to_base64()),
-        rustStrToByteArr(m_account->value()->curve25519_key()->to_base64())
+        rustStrToByteArr(m_account->value()->ed25519_key()->to_base64())
     };
 }
 

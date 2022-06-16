@@ -39,6 +39,12 @@ public:
     //! This needs to be called before any other action or use createNewAccount() instead.
     void unpickle(QByteArray &pickled, const PicklingMode &mode);
 
+    //! Deserialises from encrypted Base64 that was previously obtained
+    //! by pickling a `QOlmAccount` using the legacy libOlm library.
+    //! This needs to be called before any other action or use
+    //! createNewAccount() instead.
+    void unpickleLibOlm(QByteArray& pickled, const PicklingMode &mode);
+
     //! Serialises an OlmAccount to encrypted Base64. This function cannot
     //! fail.
     QOlmExpected<QByteArray> pickle(const PicklingMode &mode);
