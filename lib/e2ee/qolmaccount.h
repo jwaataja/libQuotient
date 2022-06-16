@@ -7,7 +7,6 @@
 
 #include "e2ee/e2ee.h"
 #include "e2ee/qolmmessage.h"
-#include "lib.rs.h"
 
 #include "csapi/keys.h"
 
@@ -27,6 +26,7 @@ class QUOTIENT_API QOlmAccount : public QObject
 public:
     QOlmAccount(const QString& userId, const QString& deviceId,
                 QObject* parent = nullptr);
+    ~QOlmAccount();
 
     //! Creates a new instance of OlmAccount. During the instantiation
     //! the Ed25519 fingerprint key pair and the Curve25519 identity key
@@ -104,7 +104,9 @@ Q_SIGNALS:
     void needsSave();
 
 private:
-    std::optional<rust::Box<olm::Account>> m_account;
+    struct Account;
+
+    std::unique_ptr<Account> m_account;
     QString m_userId;
     QString m_deviceId;
 };

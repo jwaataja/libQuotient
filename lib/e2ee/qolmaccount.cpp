@@ -8,7 +8,7 @@
 #include "e2ee/qolmsession.h"
 #include "e2ee/qolmutility.h"
 #include "e2ee/qolmutils.h"
-#include "lib.rs.h"
+#include "vodozemac/src/lib.rs.h"
 
 #include "csapi/keys.h"
 
@@ -17,6 +17,14 @@
 #include <olm/olm.h>
 
 using namespace Quotient;
+
+struct QOlmAccount::Account {
+    rust::Box<olm::Account> account;
+
+    ~Account();
+
+    rust::Box<olm::Account>& value() { return account; }
+};
 
 QByteArray rustStrToByteArr(const rust::String& str)
 {
@@ -68,25 +76,27 @@ QOlmError lastError(OlmAccount *account) {
     return fromString(olm_account_last_error(account));
 }
 
+void QOlmAccount::createNewAccount()
+{
+    m_account = std::make_unique<Account>(olm::new_account());
+    emit needsSave();
+}
+
 QOlmAccount::QOlmAccount(const QString& userId, const QString& deviceId,
                          QObject* parent)
     : QObject(parent)
-    , m_account(std::nullopt)
+    , m_account()
     , m_userId(userId)
     , m_deviceId(deviceId)
 {}
 
-void QOlmAccount::createNewAccount()
-{
-    m_account = olm::new_account();
-    emit needsSave();
-}
+QOlmAccount::~QOlmAccount() = default;
 
 void QOlmAccount::unpickle(QByteArray &pickled, const PicklingMode &mode)
 {
     try {
-        m_account =
-            olm::account_from_pickle(pickled.data(), picklingModeToKey(mode));
+        m_account = std::make_unique<Account>(
+            olm::account_from_pickle(pickled.data(), picklingModeToKey(mode)));
     } catch (const std::exception& e) {
         qCWarning(E2EE) << "Failed to unpickle olm account";
         // TODO: Do something that is not dying
@@ -96,20 +106,21 @@ void QOlmAccount::unpickle(QByteArray &pickled, const PicklingMode &mode)
 
 QOlmExpected<QByteArray> QOlmAccount::pickle(const PicklingMode &mode)
 {
-    return rustStrToByteArr(m_account.value()->pickle(picklingModeToKey(mode)));
+    return rustStrToByteArr(m_account->value()->pickle(picklingModeToKey(mode)));
 }
 
 IdentityKeys QOlmAccount::identityKeys() const
 {
-    return { rustStrToByteArr(m_account.value()->curve25519_key()->to_base64()),
-             rustStrToByteArr(
-                 m_account.value()->curve25519_key()->to_base64()) };
+    return {
+        rustStrToByteArr(m_account->value()->curve25519_key()->to_base64()),
+        rustStrToByteArr(m_account->value()->curve25519_key()->to_base64())
+    };
 }
 
 QByteArray QOlmAccount::sign(const QByteArray &message) const
 {
     return rustStrToByteArr(
-        m_account.value()->sign(message.data())->to_base64());
+        m_account->value()->sign(message.data())->to_base64());
 }
 
 QByteArray QOlmAccount::sign(const QJsonObject &message) const
@@ -133,12 +144,12 @@ QByteArray QOlmAccount::signIdentityKeys() const
 
 size_t QOlmAccount::maxNumberOfOneTimeKeys() const
 {
-    return m_account.value()->max_number_of_one_time_keys();
+    return m_account->value()->max_number_of_one_time_keys();
 }
 
 size_t QOlmAccount::generateOneTimeKeys(size_t numberOfKeys)
 {
-    m_account.value()->generate_one_time_keys(numberOfKeys);
+    m_account->value()->generate_one_time_keys(numberOfKeys);
     emit needsSave();
     // TODO: Is this the correct return value?
     return 0;
@@ -147,7 +158,7 @@ size_t QOlmAccount::generateOneTimeKeys(size_t numberOfKeys)
 UnsignedOneTimeKeys QOlmAccount::oneTimeKeys() const
 {
     UnsignedOneTimeKeys keys;
-    for (const auto& key : m_account.value()->one_time_keys()) {
+    for (const auto& key : m_account->value()->one_time_keys()) {
         keys.keys[Curve25519Key][key.key_id.data()] =
             rustStrToQStr(key.key->to_base64());
     }
@@ -237,7 +248,7 @@ QOlmExpected<QOlmSessionPtr> QOlmAccount::createOutboundSession(
 
 void QOlmAccount::markKeysAsPublished()
 {
-    m_account.value()->mark_keys_as_published();
+    m_account->value()->mark_keys_as_published();
     emit needsSave();
 }
 
