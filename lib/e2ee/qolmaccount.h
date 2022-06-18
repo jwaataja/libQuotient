@@ -112,6 +112,8 @@ Q_SIGNALS:
 private:
     struct Account;
 
+    friend class QOlmSession;
+
     std::unique_ptr<Account> m_account;
     QString m_userId;
     QString m_deviceId;

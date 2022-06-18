@@ -71,15 +71,18 @@ public:
         return *lhs < *rhs;
     }
 
-    OlmSession* raw() const { return m_session; }
+    OlmSession* raw() const { return nullptr; }
 
     QOlmSession(OlmSession* session);
 private:
+    struct Session;
+
+    QOlmSession();
+
     //! Helper function for creating new sessions and handling errors.
-    static OlmSession* create();
     static QOlmExpected<QOlmSessionPtr> createInbound(
         QOlmAccount* account, const QOlmMessage& preKeyMessage,
         bool from = false, const QString& theirIdentityKey = "");
-    OlmSession* m_session;
+    std::unique_ptr<Session> m_session;
 };
 } //namespace Quotient

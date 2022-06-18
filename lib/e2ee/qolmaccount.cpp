@@ -24,55 +24,13 @@ struct QOlmAccount::Account {
     rust::Box<olm::Account>& value() { return account; }
 };
 
-QByteArray rustStrToByteArr(const rust::String& str)
-{
-    return QByteArray(str.data(), str.length());
-}
-
-QString rustStrToQStr(const rust::String& str)
-{
-    return QString::fromUtf8(str.data(), str.length());
-}
-
-std::logic_error notImplemented(std::string_view functionName)
-{
-    std::string message("called unimplemented function ");
-    message += functionName;
-    return std::logic_error(message);
-}
-
-// Converts an exception thrown by vodozemac into a QOlmError.
-QOlmError toQOlmError(const std::exception& e)
-{
-    // TODO: Would the fromString functoin work here? It expects strings from
-    // libOlm, which might differ from vodozemac.
-    return Quotient::Unknown;
-}
-
 using PicklingKey = std::array<std::uint8_t, 32>;
 
-PicklingKey picklingModeToKey(const PicklingMode& mode)
-{
-    PicklingKey result;
-    result.fill(0);
-    if (std::holds_alternative<Quotient::Encrypted>(mode)) {
-        auto it = result.begin();
-        for (auto b : std::get<Encrypted>(mode).key) {
-            if (it == result.end()) {
-                break;
-            }
-
-            *it++ = b;
-        }
-    }
-
-    return result;
-}
-
-// Convert olm error to enum
-QOlmError lastError(OlmAccount *account) {
-    return fromString(olm_account_last_error(account));
-}
+QByteArray rustStrToByteArr(const rust::String& str);
+QString rustStrToQStr(const rust::String& str);
+std::logic_error notImplemented(std::string_view functionName);
+QOlmError toQOlmError(const std::exception& e);
+PicklingKey picklingModeToKey(const PicklingMode& mode);
 
 void QOlmAccount::createNewAccount()
 {
