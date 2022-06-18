@@ -48,7 +48,11 @@ public:
 
     QOlmInboundGroupSession(OlmInboundGroupSession* session);
 private:
-    OlmInboundGroupSession* m_groupSession;
+    struct InboundGroupSession;
+
+    QOlmInboundGroupSession();
+
+    std::unique_ptr<InboundGroupSession> m_groupSession;
     QString m_olmSessionId;
     QString m_senderId;
 };

@@ -52,7 +52,11 @@ public:
     QDateTime creationTime() const;
     void setCreationTime(const QDateTime& creationTime);
 private:
-    OlmOutboundGroupSession *m_groupSession;
+    struct GroupSession;
+
+    QOlmOutboundGroupSession();
+
+    std::unique_ptr<GroupSession> m_groupSession;
     int m_messageCount = 0;
     QDateTime m_creationTime = QDateTime::currentDateTime();
 };

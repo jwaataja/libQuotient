@@ -3,51 +3,68 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include "e2ee/qolminboundsession.h"
-#include <iostream>
+
+#include "vodozemac/src/lib.rs.h"
+
 #include <cstring>
+#include <iostream>
 
 using namespace Quotient;
+
+struct QOlmInboundGroupSession::InboundGroupSession {
+    rust::Box<megolm::InboundGroupSession> value;
+};
+
+using PicklingKey = std::array<std::uint8_t, 32>;
+
+QByteArray rustStrToByteArr(const rust::String& str);
+PicklingKey picklingModeToKey(const PicklingMode& mode);
+QOlmError toQOlmError(const std::exception& e);
+std::logic_error notImplemented(std::string_view functionName);
 
 QOlmError lastError(OlmInboundGroupSession *session) {
     return fromString(olm_inbound_group_session_last_error(session));
 }
 
-QOlmInboundGroupSession::QOlmInboundGroupSession(OlmInboundGroupSession *session)
-    : m_groupSession(session)
+QOlmInboundGroupSession::QOlmInboundGroupSession(OlmInboundGroupSession* session)
+    : QOlmInboundGroupSession()
+{}
+
+QOlmInboundGroupSession::QOlmInboundGroupSession()
+    : m_groupSession()
 {
 }
 
-QOlmInboundGroupSession::~QOlmInboundGroupSession()
-{
-    olm_clear_inbound_group_session(m_groupSession);
-    //delete[](reinterpret_cast<uint8_t *>(m_groupSession));
-}
+QOlmInboundGroupSession::~QOlmInboundGroupSession() {}
 
 std::unique_ptr<QOlmInboundGroupSession> QOlmInboundGroupSession::create(const QByteArray &key)
 {
-    const auto olmInboundGroupSession = olm_inbound_group_session(new uint8_t[olm_inbound_group_session_size()]);
-    const auto error = olm_init_inbound_group_session(olmInboundGroupSession,
-            reinterpret_cast<const uint8_t *>(key.constData()), key.size());
-
-    if (error == olm_error()) {
-        throw lastError(olmInboundGroupSession);
+    try {
+        auto sessionKey = megolm::session_key_from_base64(key.data());
+        auto result = std::unique_ptr<QOlmInboundGroupSession>(
+            new QOlmInboundGroupSession());
+        result->m_groupSession =
+            std::make_unique<InboundGroupSession>(InboundGroupSession {
+                megolm::new_inbound_group_session(*sessionKey) });
+        return result;
+    } catch (const std::exception& e) {
+        throw toQOlmError(e);
     }
-
-    return std::make_unique<QOlmInboundGroupSession>(olmInboundGroupSession);
 }
 
 std::unique_ptr<QOlmInboundGroupSession> QOlmInboundGroupSession::import(const QByteArray &key)
 {
-    const auto olmInboundGroupSession = olm_inbound_group_session(new uint8_t[olm_inbound_group_session_size()]);
-    QByteArray keyBuf = key;
-
-    const auto error = olm_import_inbound_group_session(olmInboundGroupSession,
-            reinterpret_cast<const uint8_t *>(keyBuf.data()), keyBuf.size());
-    if (error == olm_error()) {
-        throw lastError(olmInboundGroupSession);
+    try {
+        auto sessionKey = megolm::exported_session_key_from_base64(key.data());
+        auto result = std::unique_ptr<QOlmInboundGroupSession>(
+            new QOlmInboundGroupSession());
+        result->m_groupSession =
+            std::make_unique<InboundGroupSession>(InboundGroupSession {
+                megolm::import_inbound_group_session(*sessionKey) });
+        return result;
+    } catch (const std::exception& e) {
+        throw toQOlmError(e);
     }
-
-    return std::make_unique<QOlmInboundGroupSession>(olmInboundGroupSession);
 }
 
 QByteArray toKey(const PicklingMode &mode)
@@ -60,96 +77,64 @@ QByteArray toKey(const PicklingMode &mode)
 
 QByteArray QOlmInboundGroupSession::pickle(const PicklingMode &mode) const
 {
-    QByteArray pickledBuf(olm_pickle_inbound_group_session_length(m_groupSession), '0');
-    const QByteArray key = toKey(mode);
-    const auto error = olm_pickle_inbound_group_session(m_groupSession, key.data(), key.length(), pickledBuf.data(),
-            pickledBuf.length());
-    if (error == olm_error()) {
-        throw lastError(m_groupSession);
-    }
-    return pickledBuf;
+    return rustStrToByteArr(
+        m_groupSession->value->pickle(picklingModeToKey(mode)));
 }
 
 QOlmExpected<QOlmInboundGroupSessionPtr> QOlmInboundGroupSession::unpickle(
     const QByteArray& pickled, const PicklingMode& mode)
 {
-    QByteArray pickledBuf = pickled;
-    const auto groupSession = olm_inbound_group_session(new uint8_t[olm_inbound_group_session_size()]);
-    QByteArray key = toKey(mode);
-    const auto error = olm_unpickle_inbound_group_session(groupSession, key.data(), key.length(),
-            pickledBuf.data(), pickledBuf.size());
-    if (error == olm_error()) {
-        return lastError(groupSession);
+    try {
+        auto result = std::unique_ptr<QOlmInboundGroupSession>(
+            new QOlmInboundGroupSession());
+        result->m_groupSession = std::make_unique<InboundGroupSession>(
+            InboundGroupSession { megolm::inbound_group_session_from_pickle(
+                pickled.data(), picklingModeToKey(mode)) });
+        return result;
+    } catch (const std::exception& e) {
+        return toQOlmError(e);
     }
-    key.clear();
-
-    return std::make_unique<QOlmInboundGroupSession>(groupSession);
 }
 
 QOlmExpected<std::pair<QByteArray, uint32_t>> QOlmInboundGroupSession::decrypt(
     const QByteArray& message)
 {
-    // This is for capturing the output of olm_group_decrypt
-    uint32_t messageIndex = 0;
-
-    // We need to clone the message because
-    // olm_decrypt_max_plaintext_length destroys the input buffer
-    QByteArray messageBuf(message.length(), '0');
-    std::copy(message.begin(), message.end(), messageBuf.begin());
-
-    QByteArray plaintextBuf(olm_group_decrypt_max_plaintext_length(m_groupSession,
-                reinterpret_cast<uint8_t *>(messageBuf.data()), messageBuf.length()), '0');
-
-    messageBuf = QByteArray(message.length(), '0');
-    std::copy(message.begin(), message.end(), messageBuf.begin());
-
-    const auto plaintextLen = olm_group_decrypt(m_groupSession, reinterpret_cast<uint8_t *>(messageBuf.data()),
-            messageBuf.length(), reinterpret_cast<uint8_t *>(plaintextBuf.data()), plaintextBuf.length(), &messageIndex);
-
-    // Error code or plaintext length is returned
-    const auto decryptError = plaintextLen;
-
-    if (decryptError == olm_error()) {
-        return lastError(m_groupSession);
+    try {
+        auto megolmMessage = megolm::megolm_message_from_base64(message.data());
+        auto result = m_groupSession->value->decrypt(*megolmMessage);
+        return std::pair<QByteArray, uint32_t> {
+            rustStrToByteArr(result.plaintext), result.message_index
+        };
+    } catch (const std::exception& e) {
+        return toQOlmError(e);
     }
-
-    QByteArray output(plaintextLen, '0');
-    std::memcpy(output.data(), plaintextBuf.data(), plaintextLen);
-
-    return std::make_pair(output, messageIndex);
 }
 
 QOlmExpected<QByteArray> QOlmInboundGroupSession::exportSession(uint32_t messageIndex)
 {
-    const auto keyLength = olm_export_inbound_group_session_length(m_groupSession);
-    QByteArray keyBuf(keyLength, '0');
-    const auto error = olm_export_inbound_group_session(m_groupSession, reinterpret_cast<uint8_t *>(keyBuf.data()), keyLength, messageIndex);
-
-    if (error == olm_error()) {
-        return lastError(m_groupSession);
+    try {
+        return rustStrToByteArr(
+            m_groupSession->value->export_at(messageIndex)->to_base64());
+    } catch (const std::exception& e) {
+        return toQOlmError(e);
     }
-    return keyBuf;
 }
 
 uint32_t QOlmInboundGroupSession::firstKnownIndex() const
 {
-    return olm_inbound_group_session_first_known_index(m_groupSession);
+    return m_groupSession->value->first_known_index();
 }
 
 QByteArray QOlmInboundGroupSession::sessionId() const
 {
-    QByteArray sessionIdBuf(olm_inbound_group_session_id_length(m_groupSession), '0');
-    const auto error = olm_inbound_group_session_id(m_groupSession, reinterpret_cast<uint8_t *>(sessionIdBuf.data()),
-            sessionIdBuf.length());
-    if (error == olm_error()) {
-        throw lastError(m_groupSession);
-    }
-    return sessionIdBuf;
+    return rustStrToByteArr(m_groupSession->value->session_id());
 }
 
 bool QOlmInboundGroupSession::isVerified() const
 {
-    return olm_inbound_group_session_is_verified(m_groupSession) != 0;
+    // This function has not apparent vodozemac equivalent, and according to
+    // the libolm documentation it is mainly used in unit tests.
+    throw notImplemented("QOlmInboundGroupSession::isVerified");
 }
 
 QString QOlmInboundGroupSession::olmSessionId() const
