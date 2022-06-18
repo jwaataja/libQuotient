@@ -33,9 +33,13 @@ public:
     //! Serialises an `QOlmSession` to encrypted Base64.
     QOlmExpected<QByteArray> pickle(const PicklingMode &mode) const;
 
-    //! Deserialises from encrypted Base64 that was previously obtained by pickling a `QOlmSession`.
+    //! Deserialises from encrypted Base64 that was previously obtained by
+    //! pickling a `QOlmSession` using the legacy libOlm library.
     static QOlmExpected<QOlmSessionPtr> unpickle(
         const QByteArray& pickled, const PicklingMode& mode);
+
+    static QOlmExpected<QOlmSessionPtr> unpickleLibOlm(const QByteArray& pickled,
+                                                       const PicklingMode& mode);
 
     //! Encrypts a plaintext message using the session.
     QOlmMessage encrypt(const QString &plaintext);

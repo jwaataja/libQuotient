@@ -115,6 +115,20 @@ QOlmExpected<QOlmSessionPtr> QOlmSession::unpickle(const QByteArray& pickled,
     }
 }
 
+QOlmExpected<QOlmSessionPtr> QOlmSession::unpickleLibOlm(
+    const QByteArray& pickled, const PicklingMode& mode)
+{
+    try {
+        auto result = std::unique_ptr<QOlmSession>(new QOlmSession());
+        result->m_session = std::make_unique<Session>(
+            Session { olm::session_from_libolm_pickle(pickled.data(),
+                                                      toKey(mode).data()) });
+        return result;
+    } catch (const std::exception& e) {
+        return toQOlmError(e);
+    }
+}
+
 QOlmMessage QOlmSession::encrypt(const QString &plaintext)
 {
     auto encryptedParts =

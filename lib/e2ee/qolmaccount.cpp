@@ -52,7 +52,7 @@ void QOlmAccount::unpickle(QByteArray &pickled, const PicklingMode &mode)
         m_account = std::make_unique<Account>(Account {
             olm::account_from_pickle(pickled.data(), picklingModeToKey(mode)) });
     } catch (const std::exception& e) {
-        qCWarning(E2EE) << "Failed to unpickle olm account";
+        qCWarning(E2EE) << "Failed to unpickle olm account: " << e.what();
         // TODO: Do something that is not dying
         //  Probably log the user out since we have no way of getting to the keys
     }
@@ -65,7 +65,7 @@ void QOlmAccount::unpickleLibOlm(QByteArray &pickled, const PicklingMode &mode)
             Account { olm::account_from_libolm_pickle(pickled.data(),
                                                       toKey(mode).data()) });
     } catch (const std::exception& e) {
-        qCWarning(E2EE) << "Failed to unpickle olm account";
+        qCWarning(E2EE) << "Failed to unpickle olm account: " << e.what();
         // TODO: Do something that is not dying
         //  Probably log the user out since we have no way of getting to the keys
     }
