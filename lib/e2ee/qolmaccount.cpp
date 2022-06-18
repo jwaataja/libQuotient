@@ -19,9 +19,7 @@
 using namespace Quotient;
 
 struct QOlmAccount::Account {
-    rust::Box<olm::Account> account;
-
-    rust::Box<olm::Account>& value() { return account; }
+    rust::Box<olm::Account> value;
 };
 
 using PicklingKey = std::array<std::uint8_t, 32>;
@@ -75,21 +73,18 @@ void QOlmAccount::unpickleLibOlm(QByteArray &pickled, const PicklingMode &mode)
 
 QOlmExpected<QByteArray> QOlmAccount::pickle(const PicklingMode &mode)
 {
-    return rustStrToByteArr(m_account->value()->pickle(picklingModeToKey(mode)));
+    return rustStrToByteArr(m_account->value->pickle(picklingModeToKey(mode)));
 }
 
 IdentityKeys QOlmAccount::identityKeys() const
 {
-    return {
-        rustStrToByteArr(m_account->value()->curve25519_key()->to_base64()),
-        rustStrToByteArr(m_account->value()->ed25519_key()->to_base64())
-    };
+    return { rustStrToByteArr(m_account->value->curve25519_key()->to_base64()),
+             rustStrToByteArr(m_account->value->ed25519_key()->to_base64()) };
 }
 
 QByteArray QOlmAccount::sign(const QByteArray &message) const
 {
-    return rustStrToByteArr(
-        m_account->value()->sign(message.data())->to_base64());
+    return rustStrToByteArr(m_account->value->sign(message.data())->to_base64());
 }
 
 QByteArray QOlmAccount::sign(const QJsonObject &message) const
@@ -113,12 +108,12 @@ QByteArray QOlmAccount::signIdentityKeys() const
 
 size_t QOlmAccount::maxNumberOfOneTimeKeys() const
 {
-    return m_account->value()->max_number_of_one_time_keys();
+    return m_account->value->max_number_of_one_time_keys();
 }
 
 size_t QOlmAccount::generateOneTimeKeys(size_t numberOfKeys)
 {
-    m_account->value()->generate_one_time_keys(numberOfKeys);
+    m_account->value->generate_one_time_keys(numberOfKeys);
     emit needsSave();
     // TODO: Is this the correct return value?
     return 0;
@@ -127,7 +122,7 @@ size_t QOlmAccount::generateOneTimeKeys(size_t numberOfKeys)
 UnsignedOneTimeKeys QOlmAccount::oneTimeKeys() const
 {
     UnsignedOneTimeKeys keys;
-    for (const auto& key : m_account->value()->one_time_keys()) {
+    for (const auto& key : m_account->value->one_time_keys()) {
         keys.keys[Curve25519Key][key.key_id.data()] =
             rustStrToQStr(key.key->to_base64());
     }
@@ -217,7 +212,7 @@ QOlmExpected<QOlmSessionPtr> QOlmAccount::createOutboundSession(
 
 void QOlmAccount::markKeysAsPublished()
 {
-    m_account->value()->mark_keys_as_published();
+    m_account->value->mark_keys_as_published();
     emit needsSave();
 }
 

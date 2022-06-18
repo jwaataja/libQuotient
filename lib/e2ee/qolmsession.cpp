@@ -14,9 +14,7 @@
 using namespace Quotient;
 
 struct QOlmAccount::Account {
-    rust::Box<olm::Account> account;
-
-    rust::Box<olm::Account>& value() { return account; }
+    rust::Box<olm::Account> value;
 };
 
 struct QOlmSession::Session {
@@ -57,10 +55,9 @@ QOlmExpected<QOlmSessionPtr> QOlmSession::createInbound(
         auto result = std::unique_ptr<QOlmSession>(new QOlmSession());
         // TODO: This returns the decrypted message as well, what happens to
         // it?
-        result->m_session = std::make_unique<Session>(
-            Session { (account->m_account->value()
-                           ->create_inbound_session(*key, *message)
-                           .session) });
+        result->m_session = std::make_unique<Session>(Session {
+            (account->m_account->value->create_inbound_session(*key, *message)
+                 .session) });
         return result;
     } catch (const std::exception& e) {
         qCWarning(E2EE) << "Error when creating inbound session: " << e.what();
@@ -92,8 +89,8 @@ QOlmExpected<QOlmSessionPtr> QOlmSession::createOutboundSession(
             types::curve_key_from_base64(qStrToStr(theirOneTimeKey));
         auto result = std::unique_ptr<QOlmSession>(new QOlmSession());
         result->m_session = std::make_unique<Session>(Session {
-            account->m_account->value()->create_outbound_session(*identityKey,
-                                                                 *oneTimeKey) });
+            account->m_account->value->create_outbound_session(*identityKey,
+                                                               *oneTimeKey) });
         return result;
     } catch (const std::exception& e) {
         return toQOlmError(e);
