@@ -362,7 +362,7 @@ if (${PROJECT_NAME}_ENABLE_E2EE)
     find_dependency(OpenSSL)
     find_dependency(${Qt}Sql)") # For QuotientConfig.cmake.in
     add_dependencies(${PROJECT_NAME} vodozemac)
-    message( "${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}")
+    message("${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}")
     message("${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}/libvodozemac.a")
     target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge)
     target_link_libraries(${PROJECT_NAME} ${TARGET_DIR}/libvodozemac.a)
