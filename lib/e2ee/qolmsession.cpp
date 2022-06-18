@@ -45,7 +45,12 @@ QOlmExpected<QOlmSessionPtr> QOlmSession::createInbound(
         qCCritical(E2EE) << "The message is not a pre-key in when creating inbound session" << BadMessageFormat;
     }
 
-    auto keyStr = qStrToStr(theirIdentityKey);
+    rust::Str keyStr;
+    if (from) {
+        keyStr = qStrToStr(theirIdentityKey);
+    } else {
+        keyStr = preKeyMessage.toCiphertext().data();
+    }
     try {
         auto message = toOlmMessage(preKeyMessage);
         auto key = types::curve_key_from_base64(keyStr);
