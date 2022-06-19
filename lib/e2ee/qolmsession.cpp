@@ -46,21 +46,16 @@ QOlmExpected<QOlmSessionPtr> QOlmSession::createInbound(
         qCCritical(E2EE) << "The message is not a pre-key in when creating inbound session" << BadMessageFormat;
     }
 
-    rust::Str keyStr;
+    auto message = toOlmMessage(preKeyMessage);
+    rust::String keyStr;
     if (from) {
         keyStr = qStrToStr(theirIdentityKey);
     } else {
-        keyStr = preKeyMessage.toCiphertext().data();
+        keyStr = message->as_pre_key_message()->identity_key()->to_base64();
     }
     try {
-        auto message = toOlmMessage(preKeyMessage);
         auto key = types::curve_key_from_base64(keyStr);
-        // TODO: I don't like using bare new here, but to get rid of it, we
-        // would have to make this constructor public in order to use
-        // make_unique.
         auto result = std::unique_ptr<QOlmSession>(new QOlmSession());
-        // TODO: This returns the decrypted message as well, what happens to
-        // it?
         result->m_session = std::make_unique<Session>(Session {
             (account->m_account->value->create_inbound_session(*key, *message)
                  .session) });
