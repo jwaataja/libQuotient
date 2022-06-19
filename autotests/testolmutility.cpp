@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 
 #include "testolmutility.h"
+
 #include "e2ee/qolmaccount.h"
 #include "e2ee/qolmutility.h"
-
-#include <olm/olm.h>
+#include "vodozemac/src/lib.rs.h"
 
 using namespace Quotient;
 
@@ -60,25 +60,15 @@ void TestOlmUtility::verifySignedOneTimeKey()
 
     auto msg = QJsonDocument(msgObj).toJson(QJsonDocument::Compact);
 
-    auto utilityBuf = new uint8_t[olm_utility_size()];
-    auto utility = olm_utility(utilityBuf);
-
-
     QByteArray signatureBuf1(sig.length(), '0');
     std::copy(sig.begin(), sig.end(), signatureBuf1.begin());
 
-    auto res = olm_ed25519_verify(utility,
-                                 aliceOlm.identityKeys().ed25519.data(),
-                                 aliceOlm.identityKeys().ed25519.size(),
-                                 msg.data(),
-                                 msg.size(),
-                                 (void *)sig.data(),
-                                 sig.size());
-
-    QCOMPARE(std::string(olm_utility_last_error(utility)), "SUCCESS");
-    QCOMPARE(res, 0);
-
-    delete[](reinterpret_cast<uint8_t *>(utility));
+    auto edKey =
+        types::ed25519_key_from_base64(aliceOlm.identityKeys().ed25519.data());
+    auto signature = types::ed25519_signature_from_base64(sig.data());
+    edKey->verify({ reinterpret_cast<const uint8_t*>(msg.data()),
+                    static_cast<size_t>(msg.size()) },
+                  *signature);
 
     QOlmUtility utility2;
     auto res2 =

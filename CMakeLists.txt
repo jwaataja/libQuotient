@@ -92,15 +92,6 @@ find_package(${Qt}Keychain REQUIRED)
 
 if (${PROJECT_NAME}_ENABLE_E2EE)
     find_package(${Qt} ${QtMinVersion} REQUIRED Sql)
-    find_package(Olm 3.1.3 REQUIRED)
-    set_package_properties(Olm PROPERTIES
-        DESCRIPTION "Implementation of the Olm and Megolm cryptographic ratchets"
-        URL "https://gitlab.matrix.org/matrix-org/olm"
-        TYPE REQUIRED
-    )
-    if (Olm_FOUND)
-        message(STATUS "Using libOlm ${Olm_VERSION} at ${Olm_DIR}")
-    endif()
 
     find_package(Git QUIET)
     if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -141,6 +132,7 @@ if (${PROJECT_NAME}_ENABLE_E2EE)
         set(CARGO_CMD cargo build --release)
         set(TARGET_DIR "${CMAKE_CURRENT_BINARY_DIR}/release")
     endif ()
+    set(VODOZEMAC_INCLUDE "${CMAKE_CURRENT_BINARY_DIR}/cxxbridge")
 
     add_custom_target(vodozemac ALL
         COMMENT "Compiling vodozemac module"
@@ -354,17 +346,16 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:${${PROJECT_NAME}_INSTALL_INCLUDEDIR}>
 )
 if (${PROJECT_NAME}_ENABLE_E2EE)
-    target_link_libraries(${PROJECT_NAME} Olm::Olm
+    target_link_libraries(${PROJECT_NAME}
         OpenSSL::Crypto
         OpenSSL::SSL
         ${Qt}::Sql)
-    set(FIND_DEPS "find_dependency(Olm)
-    find_dependency(OpenSSL)
+    set(FIND_DEPS "find_dependency(OpenSSL)
     find_dependency(${Qt}Sql)") # For QuotientConfig.cmake.in
     add_dependencies(${PROJECT_NAME} vodozemac)
     message("${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}")
     message("${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}/libvodozemac.a")
-    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${VODOZEMAC_INCLUDE})
     target_link_libraries(${PROJECT_NAME} ${TARGET_DIR}/libvodozemac.a)
 endif()
 

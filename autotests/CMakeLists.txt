@@ -8,6 +8,11 @@ function(QUOTIENT_ADD_TEST)
     cmake_parse_arguments(ARG "" "NAME" "" ${ARGN})
     add_executable(${ARG_NAME} ${ARG_NAME}.cpp)
     target_link_libraries(${ARG_NAME} ${Qt}::Core ${Qt}::Test Quotient)
+
+    add_dependencies(${ARG_NAME} vodozemac)
+    target_include_directories(${ARG_NAME} PRIVATE ${VODOZEMAC_INCLUDE})
+    target_link_libraries(${ARG_NAME} ${TARGET_DIR}/libvodozemac.a)
+
     add_test(NAME ${ARG_NAME} COMMAND ${ARG_NAME})
 endfunction()
 

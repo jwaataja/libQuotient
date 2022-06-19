@@ -6,8 +6,6 @@
 
 #include "e2ee/e2ee.h"
 
-#include <olm/olm.h>
-
 namespace Quotient {
 
 //! An in-bound group session is responsible for decrypting incoming
@@ -50,7 +48,6 @@ public:
     QString senderId() const;
     void setSenderId(const QString& senderId);
 
-    QOlmInboundGroupSession(OlmInboundGroupSession* session);
 private:
     struct InboundGroupSession;
 

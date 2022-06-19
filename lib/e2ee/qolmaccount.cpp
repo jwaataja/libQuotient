@@ -14,8 +14,6 @@
 
 #include <QtCore/QRandomGenerator>
 
-#include <olm/olm.h>
-
 using namespace Quotient;
 
 struct QOlmAccount::Account {

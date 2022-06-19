@@ -4,18 +4,12 @@
 
 #include "e2ee/qolmutility.h"
 
-#include <vodozemac/src/lib.rs.h>
 #include <openssl/sha.h>
-#include <olm/olm.h>
+#include <vodozemac/src/lib.rs.h>
 
 using namespace Quotient;
 
 rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
-
-// Convert olm error to enum
-QOlmError lastError(OlmUtility *utility) {
-    return fromString(olm_utility_last_error(utility));
-}
 
 QString QOlmUtility::sha256Bytes(const QByteArray &inputBuf) const
 {

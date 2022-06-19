@@ -9,7 +9,6 @@
 #include "vodozemac/src/lib.rs.h"
 
 #include <cstring>
-#include <olm/olm.h>
 
 using namespace Quotient;
 
@@ -29,10 +28,6 @@ rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 rust::Box<olm::OlmMessage> toOlmMessage(const QOlmMessage& message);
 PicklingKey picklingModeToKey(const PicklingMode& mode);
 QOlmError toQOlmError(const std::exception& e);
-
-QOlmError lastError(OlmSession* session) {
-    return fromString(olm_session_last_error(session));
-}
 
 QOlmSession::QOlmSession() = default;
 

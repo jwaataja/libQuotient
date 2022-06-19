@@ -21,14 +21,6 @@ rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 PicklingKey picklingModeToKey(const PicklingMode& mode);
 QOlmError toQOlmError(const std::exception& e);
 
-QOlmError lastError(OlmOutboundGroupSession *session) {
-    return fromString(olm_outbound_group_session_last_error(session));
-}
-
-QOlmOutboundGroupSession::QOlmOutboundGroupSession(OlmOutboundGroupSession*)
-    : QOlmOutboundGroupSession()
-{}
-
 QOlmOutboundGroupSession::QOlmOutboundGroupSession()
     : m_groupSession(std::make_unique<GroupSession>(
         GroupSession { megolm::new_group_session() }))

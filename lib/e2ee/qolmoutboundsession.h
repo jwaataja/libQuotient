@@ -7,7 +7,6 @@
 #include "e2ee/e2ee.h"
 
 #include <memory>
-#include <olm/olm.h>
 
 namespace Quotient {
 
@@ -48,7 +47,6 @@ public:
     //! Each message is sent with a different ratchet key. This function returns the
     //! ratchet key that will be used for the next message.
     QOlmExpected<QByteArray> sessionKey() const;
-    QOlmOutboundGroupSession(OlmOutboundGroupSession *groupSession);
 
     int messageCount() const;
     void setMessageCount(int messageCount);

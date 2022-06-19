@@ -23,14 +23,6 @@ rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 QOlmError toQOlmError(const std::exception& e);
 std::logic_error notImplemented(std::string_view functionName);
 
-QOlmError lastError(OlmInboundGroupSession *session) {
-    return fromString(olm_inbound_group_session_last_error(session));
-}
-
-QOlmInboundGroupSession::QOlmInboundGroupSession(OlmInboundGroupSession*)
-    : QOlmInboundGroupSession()
-{}
-
 QOlmInboundGroupSession::QOlmInboundGroupSession() = default;
 
 QOlmInboundGroupSession::~QOlmInboundGroupSession() = default;
