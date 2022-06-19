@@ -49,10 +49,6 @@
 #    include <qt5keychain/keychain.h>
 #endif
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-#    include <QtCore/QCborValue>
-#endif
-
 #include <QtCore/QCoreApplication>
 #include <QtCore/QDir>
 #include <QtCore/QElapsedTimer>
@@ -92,7 +88,7 @@ public:
     // state is Invited. The spec mandates to keep Invited room state
     // separately; specifically, we should keep objects for Invite and
     // Leave state of the same room if the two happen to co-exist.
-    QHash<QPair<QString, bool>, Room*> roomMap;
+    QHash<std::pair<QString, bool>, Room*> roomMap;
     /// Mapping from serverparts to alias/room id mappings,
     /// as of the last sync
     QHash<QString, QString> roomAliasMap;
@@ -381,10 +377,9 @@ public:
                                   const QString& device) const;
     QString edKeyForUserDevice(const QString& userId,
                                const QString& device) const;
-    std::unique_ptr<EncryptedEvent> makeEventForSessionKey(
-        const QString& roomId, const QString& targetUserId,
-        const QString& targetDeviceId, const QByteArray& sessionId,
-        const QByteArray& sessionKey) const;
+    QJsonObject encryptSessionKeyEvent(QJsonObject payloadJson,
+                                       const QString& targetUserId,
+                                       const QString& targetDeviceId) const;
 #endif
 
     void saveAccessTokenToKeychain() const
@@ -1365,17 +1360,10 @@ ForgetRoomJob* Connection::forgetRoom(const QString& id)
 }
 
 SendToDeviceJob* Connection::sendToDevices(
-    const QString& eventType, const UsersToDevicesToEvents& eventsMap)
+    const QString& eventType, const UsersToDevicesToContent& contents)
 {
-    QHash<QString, QHash<QString, QJsonObject>> json;
-    json.reserve(int(eventsMap.size()));
-    for (const auto& [userId, devicesToEvents] : eventsMap) {
-        auto& jsonUser = json[userId];
-        for (const auto& [deviceId, event] : devicesToEvents)
-            jsonUser.insert(deviceId, event->contentJson());
-    }
     return callApi<SendToDeviceJob>(BackgroundRequest, eventType,
-                                    generateTxnId(), json);
+                                    generateTxnId(), contents);
 }
 
 SendMessageJob* Connection::sendMessage(const QString& roomId,
@@ -1715,7 +1703,7 @@ Room* Connection::provideRoom(const QString& id, Omittable<JoinState> joinState)
     Q_ASSERT_X(!id.isEmpty(), __FUNCTION__, "Empty room id");
 
     // If joinState is empty, all joinState == comparisons below are false.
-    const auto roomKey = qMakePair(id, joinState == JoinState::Invite);
+    const std::pair roomKey { id, joinState == JoinState::Invite };
     auto* room = d->roomMap.value(roomKey, nullptr);
     if (room) {
         // Leave is a special case because in transition (5a) (see the .h file)
@@ -1834,16 +1822,10 @@ void Connection::saveRoomState(Room* r) const
     QFile outRoomFile { stateCacheDir().filePath(
         SyncData::fileNameForRoom(r->id())) };
     if (outRoomFile.open(QFile::WriteOnly)) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         const auto data =
             d->cacheToBinary
                 ? QCborValue::fromJsonValue(r->toJson()).toCbor()
                 : QJsonDocument(r->toJson()).toJson(QJsonDocument::Compact);
-#else
-        QJsonDocument json { r->toJson() };
-        const auto data = d->cacheToBinary ? json.toBinaryData()
-                                           : json.toJson(QJsonDocument::Compact);
-#endif
         outRoomFile.write(data.data(), data.size());
         qCDebug(MAIN) << "Room state cache saved to" << outRoomFile.fileName();
     } else {
@@ -1913,15 +1895,9 @@ void Connection::saveState() const
     }
 #endif
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     const auto data =
         d->cacheToBinary ? QCborValue::fromJsonValue(rootObj).toCbor()
                          : QJsonDocument(rootObj).toJson(QJsonDocument::Compact);
-#else
-    QJsonDocument json { rootObj };
-    const auto data = d->cacheToBinary ? json.toBinaryData()
-                                       : json.toJson(QJsonDocument::Compact);
-#endif
     qCDebug(PROFILER) << "Cache for" << userId() << "generated in" << et;
 
     outFile.write(data.data(), data.size());
@@ -2354,30 +2330,15 @@ bool Connection::Private::createOlmSession(const QString& targetUserId,
     return true;
 }
 
-std::unique_ptr<EncryptedEvent> Connection::Private::makeEventForSessionKey(
-    const QString& roomId, const QString& targetUserId,
-    const QString& targetDeviceId, const QByteArray& sessionId,
-    const QByteArray& sessionKey) const
+QJsonObject Connection::Private::encryptSessionKeyEvent(
+    QJsonObject payloadJson, const QString& targetUserId,
+    const QString& targetDeviceId) const
 {
-    // Noisy but nice for debugging
-    // qDebug(E2EE) << "Creating the payload for" << data->userId() << device <<
-    // sessionId << sessionKey.toHex();
-    const auto event = makeEvent<RoomKeyEvent>("m.megolm.v1.aes-sha2", roomId,
-                                               sessionId, sessionKey,
-                                               data->userId());
-    auto payloadJson = event->fullJson();
     payloadJson.insert("recipient"_ls, targetUserId);
-    payloadJson.insert(SenderKeyL, data->userId());
     payloadJson.insert("recipient_keys"_ls,
                        QJsonObject { { Ed25519Key,
                                        edKeyForUserDevice(targetUserId,
                                                           targetDeviceId) } });
-    payloadJson.insert("keys"_ls,
-                       QJsonObject {
-                           { Ed25519Key,
-                             QString(olmAccount->identityKeys().ed25519) } });
-    payloadJson.insert("sender_device"_ls, data->deviceId());
-
     const auto [type, cipherText] = olmEncryptMessage(
         targetUserId, targetDeviceId,
         QJsonDocument(payloadJson).toJson(QJsonDocument::Compact));
@@ -2387,8 +2348,8 @@ std::unique_ptr<EncryptedEvent> Connection::Private::makeEventForSessionKey(
                         { "body"_ls, QString(cipherText) } } }
     };
 
-    return makeEvent<EncryptedEvent>(encrypted,
-                                     olmAccount->identityKeys().curve25519);
+    return EncryptedEvent(encrypted, olmAccount->identityKeys().curve25519)
+        .contentJson();
 }
 
 void Connection::sendSessionKeyToDevices(
@@ -2409,11 +2370,21 @@ void Connection::sendSessionKeyToDevices(
     if (hash.isEmpty())
         return;
 
+    auto keyEventJson = RoomKeyEvent(MegolmV1AesSha2AlgoKey, roomId, sessionId,
+                                     sessionKey, userId())
+                            .fullJson();
+    keyEventJson.insert(SenderKeyL, userId());
+    keyEventJson.insert("sender_device"_ls, deviceId());
+    keyEventJson.insert(
+        "keys"_ls,
+        QJsonObject {
+            { Ed25519Key, QString(olmAccount()->identityKeys().ed25519) } });
+
     auto job = callApi<ClaimKeysJob>(hash);
-    connect(job, &BaseJob::success, this, [job, this, roomId, sessionId, sessionKey, devices, index] {
-        UsersToDevicesToEvents usersToDevicesToEvents;
-        const auto oneTimeKeys = job->oneTimeKeys();
-        for (const auto& [targetUserId, targetDeviceId] :
+    connect(job, &BaseJob::success, this, [job, this, roomId, sessionId, keyEventJson, devices, index] {
+        QHash<QString, QHash<QString, QJsonObject>> usersToDevicesToContent;
+        for (const auto oneTimeKeys = job->oneTimeKeys();
+             const auto& [targetUserId, targetDeviceId] :
              asKeyValueRange(devices)) {
             if (!hasOlmSession(targetUserId, targetDeviceId)
                 && !d->createOlmSession(
@@ -2421,12 +2392,15 @@ void Connection::sendSessionKeyToDevices(
                     oneTimeKeys[targetUserId][targetDeviceId]))
                 continue;
 
-            usersToDevicesToEvents[targetUserId][targetDeviceId] =
-                d->makeEventForSessionKey(roomId, targetUserId, targetDeviceId,
-                                          sessionId, sessionKey);
+            // Noisy but nice for debugging
+//            qDebug(E2EE) << "Creating the payload for" << targetUserId
+//                         << targetDeviceId << sessionId << sessionKey.toHex();
+            usersToDevicesToContent[targetUserId][targetDeviceId] =
+                d->encryptSessionKeyEvent(keyEventJson, targetUserId,
+                                          targetDeviceId);
         }
-        if (!usersToDevicesToEvents.empty()) {
-            sendToDevices(EncryptedEvent::TypeId, usersToDevicesToEvents);
+        if (!usersToDevicesToContent.empty()) {
+            sendToDevices(EncryptedEvent::TypeId, usersToDevicesToContent);
             QVector<std::tuple<QString, QString, QString>> receivedDevices;
             receivedDevices.reserve(devices.size());
             for (const auto& [user, device] : asKeyValueRange(devices))

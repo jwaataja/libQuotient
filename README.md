@@ -7,7 +7,10 @@
 [![release](https://img.shields.io/github/release/quotient-im/libQuotient/all.svg)](https://github.com/quotient-im/libQuotient/releases/latest)
 [![](https://img.shields.io/cii/percentage/1023.svg?label=CII%20best%20practices)](https://bestpractices.coreinfrastructure.org/projects/1023/badge)
 ![](https://img.shields.io/github/commit-activity/y/quotient-im/libQuotient.svg)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/quotient-im/libQuotient.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/quotient-im/libQuotient/context:cpp)
+![CI Status](https://img.shields.io/github/workflow/status/quotient-im/libQuotient/CI)
+![Sonar Tech Debt](https://img.shields.io/sonar/tech_debt/quotient-im_libQuotient?server=https%3A%2F%2Fsonarcloud.io)
+![Sonar Coverage](https://img.shields.io/sonar/coverage/quotient-im_libQuotient?server=https%3A%2F%2Fsonarcloud.io)
+![Matrix](https://img.shields.io/matrix/quotient:matrix.org?logo=matrix)
 
 The Quotient project aims to produce a Qt5-based SDK to develop applications
 for [Matrix](https://matrix.org). libQuotient is a library that enables client
@@ -26,22 +29,20 @@ If you find what looks like a security issue, please use instructions
 in SECURITY.md.
 
 ## Getting and using libQuotient
-Depending on your platform, the library can come as a separate package.
-Recent releases of Debian and openSUSE, e.g., already have the package
-(under the old name). If your Linux repo doesn't provide binary package
-(either libqmatrixclient - older - or libquotient - newer), or you're
-on Windows or macOS, your best bet is to build the library from the source
-and bundle it with your application.
+Depending on your platform, the library can be obtained from a package
+management system. Recent releases of Debian and openSUSE, e.g., already have
+it. Alternatively, just build the library from the source and bundle it with
+your application, as described below.
 
 ### Pre-requisites
 - A recent Linux, macOS or Windows system (desktop versions are known to work;
   mobile operating systems where Qt is available might work too)
-  - Recent enough Linux examples: Debian Bullseye; Fedora 33; openSUSE Leap 15.3;
-    Ubuntu Focal Fossa.
-- Qt 5 (either Open Source or Commercial), 5.12 or higher
+  - Recent enough Linux examples: Debian Bullseye; Fedora 35;
+    openSUSE Leap 15.4; Ubuntu 22.04 LTS.
+- Qt 5 (either Open Source or Commercial), 5.15 or higher
 - CMake 3.16 or newer (from your package management system or
   [the official website](https://cmake.org/download/))
-- A C++ toolchain with complete (as much as possible) C++17 and basic C++20:
+- A C++ toolchain with that supports at least some subset of C++20:
   - GCC 10 (Windows, Linux, macOS), Clang 11 (Linux), Apple Clang 12 (macOS)
     and Visual Studio 2019 (Windows) are the oldest officially supported.
 - Any build system that works with CMake should be fine:

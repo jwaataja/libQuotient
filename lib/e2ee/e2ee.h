@@ -8,7 +8,6 @@
 #include "converters.h"
 #include "expected.h"
 #include "qolmerrors.h"
-#include "quotient_common.h"
 
 #include <QtCore/QMetaType>
 #include <variant>
@@ -37,8 +36,9 @@ constexpr auto MegolmV1AesSha2AlgoKey = "m.megolm.v1.aes-sha2"_ls;
 
 inline bool isSupportedAlgorithm(const QString& algorithm)
 {
-    static constexpr auto SupportedAlgorithms =
-        make_array(OlmV1Curve25519AesSha2AlgoKey, MegolmV1AesSha2AlgoKey);
+    static constexpr std::array SupportedAlgorithms {
+        OlmV1Curve25519AesSha2AlgoKey, MegolmV1AesSha2AlgoKey
+    };
     return std::find(SupportedAlgorithms.cbegin(), SupportedAlgorithms.cend(),
                      algorithm)
            != SupportedAlgorithms.cend();
@@ -70,7 +70,7 @@ struct IdentityKeys
 };
 
 //! Struct representing the one-time keys.
-struct QUOTIENT_API UnsignedOneTimeKeys
+struct UnsignedOneTimeKeys
 {
     QHash<QString, QHash<QString, QString>> keys;
 
