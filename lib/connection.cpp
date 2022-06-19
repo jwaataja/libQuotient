@@ -621,7 +621,7 @@ void Connection::Private::completeSetup(const QString& mxId)
     loop.exec();
 
     if (job.error() == QKeychain::Error::EntryNotFound) {
-        picklingMode = Encrypted { getRandom(128) };
+        picklingMode = Encrypted { getRandom(32) };
         QKeychain::WritePasswordJob job(qAppName());
         job.setAutoDelete(false);
         job.setKey(accountSettings.userId() + QStringLiteral("-Pickle"));
