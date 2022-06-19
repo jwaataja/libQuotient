@@ -114,8 +114,7 @@ size_t QOlmAccount::generateOneTimeKeys(size_t numberOfKeys)
 {
     m_account->value->generate_one_time_keys(numberOfKeys);
     emit needsSave();
-    // TODO: Is this the correct return value?
-    return 0;
+    return numberOfKeys;
 }
 
 UnsignedOneTimeKeys QOlmAccount::oneTimeKeys() const
