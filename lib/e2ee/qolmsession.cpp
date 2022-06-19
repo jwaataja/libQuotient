@@ -25,6 +25,7 @@ using PicklingKey = std::array<std::uint8_t, 32>;
 
 QByteArray rustStrToByteArr(const rust::String& str);
 rust::String qStrToStr(const QString& str);
+rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 rust::Box<olm::OlmMessage> toOlmMessage(const QOlmMessage& message);
 PicklingKey picklingModeToKey(const PicklingMode& mode);
 QOlmError toQOlmError(const std::exception& e);
@@ -127,7 +128,7 @@ QOlmExpected<QOlmSessionPtr> QOlmSession::unpickleLibOlm(
         auto result = std::unique_ptr<QOlmSession>(new QOlmSession());
         result->m_session = std::make_unique<Session>(
             Session { olm::session_from_libolm_pickle(pickled.data(),
-                                                      toKey(mode).data()) });
+                                                      byteArrToByteSlice(toKey(mode).data())) });
         return result;
     } catch (const std::exception& e) {
         return toQOlmError(e);

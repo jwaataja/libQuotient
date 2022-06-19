@@ -26,6 +26,7 @@ using PicklingKey = std::array<std::uint8_t, 32>;
 
 QByteArray rustStrToByteArr(const rust::String& str);
 QString rustStrToQStr(const rust::String& str);
+rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 std::logic_error notImplemented(std::string_view functionName);
 QOlmError toQOlmError(const std::exception& e);
 PicklingKey picklingModeToKey(const PicklingMode& mode);
@@ -63,7 +64,7 @@ void QOlmAccount::unpickleLibOlm(QByteArray &pickled, const PicklingMode &mode)
     try {
         m_account = std::make_unique<Account>(
             Account { olm::account_from_libolm_pickle(pickled.data(),
-                                                      toKey(mode).data()) });
+                                                      byteArrToByteSlice(toKey(mode))) });
     } catch (const std::exception& e) {
         qCWarning(E2EE) << "Failed to unpickle olm account: " << e.what();
         // TODO: Do something that is not dying

@@ -28,7 +28,7 @@ QByteArray Quotient::getRandom(size_t bufferSize)
 
 QByteArray rustStrToByteArr(const rust::String& str)
 {
-    return QByteArray(str.data(), str.length());
+    return {str.data(), static_cast<int>(str.length())};
 }
 
 QString rustStrToQStr(const rust::String& str)
@@ -40,6 +40,11 @@ rust::String qStrToStr(const QString& str)
 {
     // TODO: Possible opportunities for optimization.
     return str.toStdString();
+}
+
+rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr)
+{
+    return {reinterpret_cast<const uint8_t*>(arr.data()), static_cast<size_t>(arr.size())};
 }
 
 rust::Box<olm::OlmMessage> toOlmMessage(const QOlmMessage& message)
@@ -76,7 +81,7 @@ std::logic_error notImplemented(std::string_view functionName)
 }
 
 // Converts an exception thrown by vodozemac into a QOlmError.
-QOlmError toQOlmError(const std::exception& e)
+QOlmError toQOlmError(const std::exception&  /*e*/)
 {
     // TODO: Would the fromString functoin work here? It expects strings from
     // libOlm, which might differ from vodozemac.
