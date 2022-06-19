@@ -26,6 +26,10 @@ public:
     //! an `OlmInboundGroupSession`.
     static QOlmExpected<QOlmInboundGroupSessionPtr> unpickle(
         const QByteArray& pickled, const PicklingMode& mode);
+    //! Deserialises from encrypted Base64 that was previously obtained by
+    //! pickling a `QOlmInboundGroupSession` using the legacy libOlm library.
+    static QOlmExpected<QOlmInboundGroupSessionPtr> unpickleLibOlm(
+        const QByteArray& pickled, const PicklingMode& mode);
     //! Decrypts ciphertext received for this group session.
     QOlmExpected<std::pair<QByteArray, uint32_t> > decrypt(const QByteArray& message);
     //! Export the base64-encoded ratchet key for this session, at the given index,

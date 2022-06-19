@@ -17,6 +17,7 @@ using PicklingKey = std::array<std::uint8_t, 32>;
 
 QByteArray rustStrToByteArr(const rust::String& str);
 rust::String qStrToStr(const QString& str);
+rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 PicklingKey picklingModeToKey(const PicklingMode& mode);
 QOlmError toQOlmError(const std::exception& e);
 
@@ -24,8 +25,7 @@ QOlmError lastError(OlmOutboundGroupSession *session) {
     return fromString(olm_outbound_group_session_last_error(session));
 }
 
-QOlmOutboundGroupSession::QOlmOutboundGroupSession(
-    OlmOutboundGroupSession* session)
+QOlmOutboundGroupSession::QOlmOutboundGroupSession(OlmOutboundGroupSession*)
     : QOlmOutboundGroupSession()
 {}
 
@@ -56,6 +56,22 @@ QOlmExpected<QOlmOutboundGroupSessionPtr> QOlmOutboundGroupSession::unpickle(con
         result->m_groupSession = std::make_unique<GroupSession>(GroupSession {
             megolm::group_session_from_pickle(pickled.data(),
                                               picklingModeToKey(mode)) });
+        return result;
+    } catch (const std::exception& e) {
+        return toQOlmError(e);
+    }
+}
+
+QOlmExpected<QOlmOutboundGroupSessionPtr>
+QOlmOutboundGroupSession::unpickleLibOlm(const QByteArray& pickled,
+                                         const PicklingMode& mode)
+{
+    try {
+        auto result = std::unique_ptr<QOlmOutboundGroupSession>(
+            new QOlmOutboundGroupSession());
+        result->m_groupSession = std::make_unique<GroupSession>(
+            GroupSession { megolm::group_session_from_libolm_pickle(
+                pickled.data(), byteArrToByteSlice(toKey(mode).data())) });
         return result;
     } catch (const std::exception& e) {
         return toQOlmError(e);

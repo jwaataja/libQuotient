@@ -19,6 +19,7 @@ using PicklingKey = std::array<std::uint8_t, 32>;
 
 QByteArray rustStrToByteArr(const rust::String& str);
 PicklingKey picklingModeToKey(const PicklingMode& mode);
+rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 QOlmError toQOlmError(const std::exception& e);
 std::logic_error notImplemented(std::string_view functionName);
 
@@ -26,16 +27,13 @@ QOlmError lastError(OlmInboundGroupSession *session) {
     return fromString(olm_inbound_group_session_last_error(session));
 }
 
-QOlmInboundGroupSession::QOlmInboundGroupSession(OlmInboundGroupSession* session)
+QOlmInboundGroupSession::QOlmInboundGroupSession(OlmInboundGroupSession*)
     : QOlmInboundGroupSession()
 {}
 
-QOlmInboundGroupSession::QOlmInboundGroupSession()
-    : m_groupSession()
-{
-}
+QOlmInboundGroupSession::QOlmInboundGroupSession() = default;
 
-QOlmInboundGroupSession::~QOlmInboundGroupSession() {}
+QOlmInboundGroupSession::~QOlmInboundGroupSession() = default;
 
 std::unique_ptr<QOlmInboundGroupSession> QOlmInboundGroupSession::create(const QByteArray &key)
 {
@@ -90,6 +88,22 @@ QOlmExpected<QOlmInboundGroupSessionPtr> QOlmInboundGroupSession::unpickle(
         result->m_groupSession = std::make_unique<InboundGroupSession>(
             InboundGroupSession { megolm::inbound_group_session_from_pickle(
                 pickled.data(), picklingModeToKey(mode)) });
+        return result;
+    } catch (const std::exception& e) {
+        return toQOlmError(e);
+    }
+}
+
+QOlmExpected<QOlmInboundGroupSessionPtr> QOlmInboundGroupSession::unpickleLibOlm(
+    const QByteArray& pickled, const PicklingMode& mode)
+{
+    try {
+        auto result = std::unique_ptr<QOlmInboundGroupSession>(
+            new QOlmInboundGroupSession());
+        result->m_groupSession =
+            std::make_unique<InboundGroupSession>(InboundGroupSession {
+                megolm::inbound_group_session_from_libolm_pickle(
+                    pickled.data(), byteArrToByteSlice(toKey(mode).data())) });
         return result;
     } catch (const std::exception& e) {
         return toQOlmError(e);
