@@ -4,44 +4,41 @@
 
 #include "e2ee/qolmutility.h"
 
+#include <vodozemac/src/lib.rs.h>
+#include <openssl/sha.h>
 #include <olm/olm.h>
 
 using namespace Quotient;
+
+rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 
 // Convert olm error to enum
 QOlmError lastError(OlmUtility *utility) {
     return fromString(olm_utility_last_error(utility));
 }
 
-QOlmUtility::QOlmUtility()
+QString QOlmUtility::sha256Bytes(const QByteArray &inputBuf) const
 {
-    auto utility = new uint8_t[olm_utility_size()];
-    m_utility = olm_utility(utility);
+    std::array<uint8_t, SHA256_DIGEST_LENGTH> outputBuf{};
+    SHA256(reinterpret_cast<const uint8_t *>(inputBuf.data()), inputBuf.length(), outputBuf.data());
+    return QString::fromLocal8Bit(reinterpret_cast<const char *>(outputBuf.data()), outputBuf.size());
 }
 
-QOlmUtility::~QOlmUtility()
+QString QOlmUtility::sha256Utf8Msg(const QString &message) const
 {
-    olm_clear_utility(m_utility);
-    delete[](reinterpret_cast<uint8_t *>(m_utility));
+    return sha256Bytes(message.toUtf8());
 }
 
 QOlmExpected<bool> QOlmUtility::ed25519Verify(const QByteArray& key,
                                               const QByteArray& message,
                                               const QByteArray& signature)
 {
-    QByteArray signatureBuf(signature.length(), '0');
-    std::copy(signature.begin(), signature.end(), signatureBuf.begin());
 
-    const auto ret = olm_ed25519_verify(m_utility, key.data(), key.size(),
-            message.data(), message.size(), (void *)signatureBuf.data(), signatureBuf.size());
-
-    if (ret == olm_error()) {
-        auto error = lastError(m_utility);
-        if (error == QOlmError::BadMessageMac) {
-            return false;
-        }
-        return error;
+    try {
+        auto edKey = types::ed25519_key_from_base64(key.data());
+        edKey->verify(byteArrToByteSlice(message), *types::ed25519_signature_from_base64(signature.data()));
+        return true;
+    } catch (const std::exception&) {
+        return false;
     }
-
-    return !ret; // ret == 0 means success
 }
