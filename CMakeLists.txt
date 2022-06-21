@@ -218,11 +218,11 @@ list(APPEND lib_SRCS
 if (${PROJECT_NAME}_ENABLE_E2EE)
     list(APPEND lib_SRCS
         lib/database.h lib/database.cpp
-        lib/e2ee/qolmaccount.h lib/e2ee/qolmaccount.cpp
+        lib/e2ee/qolmaccount.h lib/e2ee/qolmaccount.cpp lib/e2ee/qolmaccount_p.h
         lib/e2ee/qolmsession.h lib/e2ee/qolmsession.cpp
         lib/e2ee/qolminboundsession.h lib/e2ee/qolminboundsession.cpp
         lib/e2ee/qolmoutboundsession.h lib/e2ee/qolmoutboundsession.cpp
-        lib/e2ee/qolmutils.h lib/e2ee/qolmutils.cpp
+        lib/e2ee/qolmutils.h lib/e2ee/qolmutils.cpp lib/e2ee/qolmutils_p.h
         lib/e2ee/qolmutility.h lib/e2ee/qolmutility.cpp
         lib/e2ee/qolmerrors.h lib/e2ee/qolmerrors.cpp
         lib/e2ee/qolmsession.h lib/e2ee/qolmsession.cpp
@@ -353,8 +353,6 @@ if (${PROJECT_NAME}_ENABLE_E2EE)
     set(FIND_DEPS "find_dependency(OpenSSL)
     find_dependency(${Qt}Sql)") # For QuotientConfig.cmake.in
     add_dependencies(${PROJECT_NAME} vodozemac)
-    message("${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}")
-    message("${CMAKE_CURRENT_SOURCE_DIR}/${TARGET_DIR}/libvodozemac.a")
     target_include_directories(${PROJECT_NAME} PRIVATE ${VODOZEMAC_INCLUDE})
     target_link_libraries(${PROJECT_NAME} ${TARGET_DIR}/libvodozemac.a)
 endif()
@@ -384,7 +382,10 @@ install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets
         INCLUDES DESTINATION ${${PROJECT_NAME}_INSTALL_INCLUDEDIR}
 )
 install(DIRECTORY lib/ DESTINATION ${${PROJECT_NAME}_INSTALL_INCLUDEDIR}
-        FILES_MATCHING PATTERN "*.h")
+        FILES_MATCHING
+        PATTERN "*.h"
+        PATTERN "*_p.h" EXCLUDE
+        )
 
 include(CMakePackageConfigHelpers)
 # NB: SameMajorVersion doesn't really work yet, as we're within 0.x trail.

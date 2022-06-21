@@ -4,12 +4,12 @@
 
 #include "e2ee/qolmutility.h"
 
+#include "e2ee/qolmutils_p.h"
+
 #include <openssl/sha.h>
 #include <vodozemac/src/lib.rs.h>
 
 using namespace Quotient;
-
-rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
 
 QString QOlmUtility::sha256Bytes(const QByteArray &inputBuf) const
 {

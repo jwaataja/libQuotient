@@ -8,6 +8,8 @@
 #include "e2ee/qolmsession.h"
 #include "e2ee/qolmutility.h"
 #include "e2ee/qolmutils.h"
+#include "e2ee/qolmutils_p.h"
+#include "qolmaccount_p.h"
 #include "vodozemac/src/lib.rs.h"
 
 #include "csapi/keys.h"
@@ -15,19 +17,6 @@
 #include <QtCore/QRandomGenerator>
 
 using namespace Quotient;
-
-struct QOlmAccount::Account {
-    rust::Box<olm::Account> value;
-};
-
-using PicklingKey = std::array<std::uint8_t, 32>;
-
-QByteArray rustStrToByteArr(const rust::String& str);
-QString rustStrToQStr(const rust::String& str);
-rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
-std::logic_error notImplemented(std::string_view functionName);
-QOlmError toQOlmError(const std::exception& e);
-PicklingKey picklingModeToKey(const PicklingMode& mode);
 
 void QOlmAccount::createNewAccount()
 {
@@ -38,7 +27,6 @@ void QOlmAccount::createNewAccount()
 QOlmAccount::QOlmAccount(const QString& userId, const QString& deviceId,
                          QObject* parent)
     : QObject(parent)
-    , m_account()
     , m_userId(userId)
     , m_deviceId(deviceId)
 {}

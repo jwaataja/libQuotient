@@ -4,7 +4,10 @@
 
 #include "qolmsession.h"
 
+#include "e2ee/qolmaccount.h"
+#include "e2ee/qolmaccount_p.h"
 #include "e2ee/qolmutils.h"
+#include "e2ee/qolmutils_p.h"
 #include "logging.h"
 #include "vodozemac/src/lib.rs.h"
 
@@ -12,22 +15,9 @@
 
 using namespace Quotient;
 
-struct QOlmAccount::Account {
-    rust::Box<olm::Account> value;
-};
-
 struct QOlmSession::Session {
     rust::Box<olm::Session> value;
 };
-
-using PicklingKey = std::array<std::uint8_t, 32>;
-
-QByteArray rustStrToByteArr(const rust::String& str);
-rust::String qStrToStr(const QString& str);
-rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
-rust::Box<olm::OlmMessage> toOlmMessage(const QOlmMessage& message);
-PicklingKey picklingModeToKey(const PicklingMode& mode);
-QOlmError toQOlmError(const std::exception& e);
 
 QOlmSession::QOlmSession() = default;
 

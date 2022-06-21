@@ -5,6 +5,7 @@
 #include "e2ee/qolmutils.h"
 
 #include "e2ee/qolmmessage.h"
+#include "e2ee/qolmutils_p.h"
 #include "vodozemac/src/lib.rs.h"
 
 #include <QtCore/QRandomGenerator>
@@ -26,36 +27,34 @@ QByteArray Quotient::getRandom(size_t bufferSize)
     return buffer;
 }
 
-QByteArray rustStrToByteArr(const rust::String& str)
+QByteArray Quotient::rustStrToByteArr(const rust::String& str)
 {
     return {str.data(), static_cast<int>(str.length())};
 }
 
-QString rustStrToQStr(const rust::String& str)
+QString Quotient::rustStrToQStr(const rust::String& str)
 {
     return QString::fromUtf8(str.data(), str.length());
 }
 
-rust::String qStrToStr(const QString& str)
+rust::String Quotient::qStrToStr(const QString& str)
 {
     // TODO: Possible opportunities for optimization.
     return str.toStdString();
 }
 
-rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr)
+rust::Slice<const uint8_t> Quotient::byteArrToByteSlice(const QByteArray& arr)
 {
     return {reinterpret_cast<const uint8_t*>(arr.data()), static_cast<size_t>(arr.size())};
 }
 
-rust::Box<olm::OlmMessage> toOlmMessage(const QOlmMessage& message)
+rust::Box<olm::OlmMessage> Quotient::toOlmMessage(const QOlmMessage& message)
 {
     return olm::olm_message_from_parts(
         { message.type(), message.toCiphertext().data() });
 }
 
-using PicklingKey = std::array<std::uint8_t, 32>;
-
-PicklingKey picklingModeToKey(const PicklingMode& mode)
+PicklingKey Quotient::picklingModeToKey(const PicklingMode& mode)
 {
     PicklingKey result;
     result.fill(0);
@@ -73,7 +72,7 @@ PicklingKey picklingModeToKey(const PicklingMode& mode)
     return result;
 }
 
-std::logic_error notImplemented(std::string_view functionName)
+std::logic_error Quotient::notImplemented(std::string_view functionName)
 {
     std::string message("called unimplemented function ");
     message += functionName;
@@ -81,7 +80,7 @@ std::logic_error notImplemented(std::string_view functionName)
 }
 
 // Converts an exception thrown by vodozemac into a QOlmError.
-QOlmError toQOlmError(const std::exception&  /*e*/)
+QOlmError Quotient::toQOlmError(const std::exception& /*e*/)
 {
     // TODO: Would the fromString functoin work here? It expects strings from
     // libOlm, which might differ from vodozemac.

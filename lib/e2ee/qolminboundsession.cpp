@@ -4,6 +4,7 @@
 
 #include "e2ee/qolminboundsession.h"
 
+#include "e2ee/qolmutils_p.h"
 #include "vodozemac/src/lib.rs.h"
 
 #include <cstring>
@@ -14,14 +15,6 @@ using namespace Quotient;
 struct QOlmInboundGroupSession::InboundGroupSession {
     rust::Box<megolm::InboundGroupSession> value;
 };
-
-using PicklingKey = std::array<std::uint8_t, 32>;
-
-QByteArray rustStrToByteArr(const rust::String& str);
-PicklingKey picklingModeToKey(const PicklingMode& mode);
-rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
-QOlmError toQOlmError(const std::exception& e);
-std::logic_error notImplemented(std::string_view functionName);
 
 QOlmInboundGroupSession::QOlmInboundGroupSession() = default;
 

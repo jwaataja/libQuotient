@@ -5,6 +5,7 @@
 #include "e2ee/qolmoutboundsession.h"
 
 #include "e2ee/qolmutils.h"
+#include "e2ee/qolmutils_p.h"
 #include "vodozemac/src/lib.rs.h"
 
 using namespace Quotient;
@@ -12,14 +13,6 @@ using namespace Quotient;
 struct QOlmOutboundGroupSession::GroupSession {
     rust::Box<megolm::GroupSession> value;
 };
-
-using PicklingKey = std::array<std::uint8_t, 32>;
-
-QByteArray rustStrToByteArr(const rust::String& str);
-rust::String qStrToStr(const QString& str);
-rust::Slice<const uint8_t> byteArrToByteSlice(const QByteArray& arr);
-PicklingKey picklingModeToKey(const PicklingMode& mode);
-QOlmError toQOlmError(const std::exception& e);
 
 QOlmOutboundGroupSession::QOlmOutboundGroupSession()
     : m_groupSession(std::make_unique<GroupSession>(
